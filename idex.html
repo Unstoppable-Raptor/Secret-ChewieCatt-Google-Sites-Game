@@ -11,25 +11,28 @@
             padding: 0;
         }
         body {
-            background-color: #f0f2f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-        #game-container {
-            position: relative;
-            width: 400px;
-            height: 500px;
-            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
-            border: 4px solid #333;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-        }
+    background-color: #f0f2f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Aligns to top if embedded space is small */
+    padding-top: 20px;
+    min-height: 100vh;
+    overflow: hidden;
+}
+#game-container {
+    position: relative;
+    width: 400px;
+    height: 500px;
+    min-width: 400px;  /* Prevents collapsing horizontally */
+    min-height: 500px; /* Forces the 500px height vertically */
+    background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+    border: 4px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
         #basket {
             position: absolute;
             bottom: 10px;
