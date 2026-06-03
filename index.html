@@ -11,28 +11,28 @@
             padding: 0;
         }
         body {
-    background-color: #f0f2f5;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start; /* Aligns to top if embedded space is small */
-    padding-top: 20px;
-    min-height: 100vh;
-    overflow: hidden;
-}
-#game-container {
-    position: relative;
-    width: 400px;
-    height: 500px;
-    min-width: 400px;  /* Prevents collapsing horizontally */
-    min-height: 500px; /* Forces the 500px height vertically */
-    background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
-    border: 4px solid #333;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 20px;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 500px;
+            min-width: 400px;
+            min-height: 500px;
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+            border: 4px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
         #basket {
             position: absolute;
             bottom: 10px;
@@ -72,33 +72,54 @@
             display: flex;
             justify-content: space-between;
         }
-        #game-over-screen {
-            display: none;
+        
+        /* OVERLAY SCREENS SYSTEM */
+        .screen-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.85);
             color: white;
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
+            padding: 20px;
+            z-index: 100;
         }
-        #start-btn {
-            margin-top: 15px;
-            padding: 10px 20px;
+        
+        .menu-btn {
+            margin-top: 12px;
+            padding: 12px 24px;
             font-size: 16px;
             font-weight: bold;
-            background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
+            width: 200px;
+            transition: background 0.2s, transform 0.1s;
         }
-        #start-btn:hover {
-            background-color: #45a049;
+        .menu-btn:active { transform: scale(0.98); }
+        
+        /* Color themes for buttons */
+        .btn-green { background-color: #4CAF50; }
+        .btn-green:hover { background-color: #45a049; }
+        .btn-orange { background-color: #ff9800; }
+        .btn-orange:hover { background-color: #e68a00; }
+        .btn-blue { background-color: #2196F3; }
+        .btn-blue:hover { background-color: #0b7dda; }
+        .btn-red { background-color: #f44336; }
+        .btn-red:hover { background-color: #da190b; }
+        
+        p.info-text {
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 15px 0;
+            max-width: 300px;
         }
     </style>
 </head>
@@ -112,18 +133,32 @@
             </div>
             <div class="ui-row" style="font-size: 13px; opacity: 0.8;">
                 <div id="highscore-display">🏆 Best: 0</div>
-                <div id="coins-display">🪙 Total Coins: 0</div>
+                <div id="coins-display">💰 Total Coins: 0</div>
             </div>
         </div>
         
         <div id="item"></div>
         <div id="basket"></div>
 
-        <div id="game-over-screen">
-            <h2>Game Over</h2>
-            <p id="final-score">Final Score: 0</p>
+        <div id="main-menu-screen" class="screen-overlay">
+            <h1 style="color: #FFD700; margin-bottom: 20px;">Catch Coins!</h1>
+            <button class="menu-btn btn-green" onclick="pressContinue()">Continue</button>
+            <button class="menu-btn btn-orange" onclick="pressNewGame()">New Game</button>
+            <button class="menu-btn btn-blue" onclick="showScreen('info-screen')">Info</button>
+            </div>
+
+        <div id="info-screen" class="screen-overlay" style="display: none;">
+            <h2>How to Play</h2>
+            <p class="info-text">Move your mouse or drag your finger across the screen to control the basket. Catch falling items to score points and build up your coin balance!</p>
+            <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">Back to Menu</button>
+        </div>
+
+        <div id="game-over-screen" class="screen-overlay" style="display: none;">
+            <h2 style="color: #f44336;">Game Over</h2>
+            <p id="final-score" style="margin-top: 10px;">Final Score: 0</p>
             <p id="high-score-notice" style="color: #FFD700; font-weight: bold; margin-top: 5px; display: none;">New High Score!</p>
-            <button id="start-btn" onclick="resetGame()">Play Again</button>
+            <button class="menu-btn btn-green" style="margin-top: 25px;" onclick="resetGame()">Play Again</button>
+            <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">Main Menu</button>
         </div>
     </div>
 
@@ -135,9 +170,11 @@
         const livesDisplay = document.getElementById('lives-display');
         const highscoreDisplay = document.getElementById('highscore-display');
         const coinsDisplay = document.getElementById('coins-display');
-        const gameOverScreen = document.getElementById('game-over-screen');
         const finalScore = document.getElementById('final-score');
         const highScoreNotice = document.getElementById('high-score-notice');
+
+        // Screen Elements
+        const screens = ['main-menu-screen', 'info-screen', 'game-over-screen'];
 
         let score = 0;
         let lives = 3;
@@ -145,33 +182,34 @@
         let itemX = 190;
         let itemY = -40;
         let speed = 4;
-        let isPlaying = true;
+        let isPlaying = false; // Turned OFF by default so game waits at menu
         let animationFrameId;
-
-        // LOAD SAVED DATA (Or default to 0 if it's their first time playing)
-        let highScore = localStorage.getItem('catchGame_highScore') ? parseInt(localStorage.getItem('catchGame_highScore')) : 0;
-        let totalCoins = localStorage.getItem('catchGame_totalCoins') ? parseInt(localStorage.getItem('catchGame_totalCoins')) : 0;
 
         const containerWidth = 400;
         const containerHeight = 500;
         const basketWidth = 60;
 
-        // Display the loaded permanent data immediately
-        highscoreDisplay.innerText = "🏆 Best: " + highScore;
-        coinsDisplay.innerText = "🪙 Total Coins: " + totalCoins;
+        // LOAD PERSISTENT DATA
+        let highScore = localStorage.getItem('catchGame_highScore') ? parseInt(localStorage.getItem('catchGame_highScore')) : 0;
+        let totalCoins = localStorage.getItem('catchGame_totalCoins') ? parseInt(localStorage.getItem('catchGame_totalCoins')) : 0;
 
+        // Render stats on UI immediately
+        highscoreDisplay.innerText = "🏆 Best: " + highScore;
+        coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
+
+        // CONTROLS
         container.addEventListener('mousemove', (e) => {
+            if (!isPlaying) return;
             const rect = container.getBoundingClientRect();
             const relativeX = e.clientX - rect.left;
             basketX = relativeX - (basketWidth / 2);
-            
             if (basketX < 0) basketX = 0;
             if (basketX > containerWidth - basketWidth) basketX = containerWidth - basketWidth;
-            
             basket.style.left = basketX + 'px';
         });
 
         container.addEventListener('touchmove', (e) => {
+            if (!isPlaying) return;
             const rect = container.getBoundingClientRect();
             const relativeX = e.touches[0].clientX - rect.left;
             basketX = relativeX - (basketWidth / 2);
@@ -181,10 +219,55 @@
             e.preventDefault();
         }, { passive: false });
 
+        // SCREEN NAVIGATOR CONTROLLER
+        function showScreen(screenId) {
+            screens.forEach(id => {
+                document.getElementById(id).style.display = (id === screenId) ? 'flex' : 'none';
+            });
+        }
+
+        // MENU BUTTON LOGIC
+        function pressContinue() {
+            // Closes menu and drops you back right where your total stats left off
+            hideAllScreens();
+            startGameSession();
+        }
+
+        function pressNewGame() {
+            if(confirm("Are you sure you want to reset ALL your personal profile stats, high scores, and coins?")) {
+                localStorage.setItem('catchGame_highScore', 0);
+                localStorage.setItem('catchGame_totalCoins', 0);
+                highScore = 0;
+                totalCoins = 0;
+                highscoreDisplay.innerText = "🏆 Best: 0";
+                coinsDisplay.innerText = "💰 Total Coins: 0";
+                hideAllScreens();
+                startGameSession();
+            }
+        }
+
+        function hideAllScreens() {
+            screens.forEach(id => document.getElementById(id).style.display = 'none');
+        }
+
+        // GAMEPLAY ENGINE
         function spawnItem() {
             itemY = -40;
             itemX = Math.floor(Math.random() * (containerWidth - 40)); 
             item.style.left = itemX + 'px';
+            item.style.top = itemY + 'px';
+        }
+
+        function startGameSession() {
+            cancelAnimationFrame(animationFrameId);
+            score = 0;
+            lives = 3;
+            speed = 4;
+            isPlaying = true;
+            scoreDisplay.innerText = "Score: 0";
+            livesDisplay.innerText = "Lives: 3";
+            spawnItem();
+            gameLoop();
         }
 
         function gameLoop() {
@@ -196,12 +279,9 @@
             if (itemY >= (containerHeight - 50) && itemY <= (containerHeight - 10)) {
                 if (itemX + 40 >= basketX && itemX <= basketX + basketWidth) {
                     score += 10;
-                    
-                    // Add to permanent total coins count
                     totalCoins += 1; 
                     localStorage.setItem('catchGame_totalCoins', totalCoins);
-                    coinsDisplay.innerText = "🪙 Total Coins: " + totalCoins;
-
+                    coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
                     scoreDisplay.innerText = "Score: " + score;
                     speed += 0.3; 
                     spawnItem();
@@ -227,34 +307,22 @@
             cancelAnimationFrame(animationFrameId); 
             finalScore.innerText = "Final Score: " + score;
             
-            // CHECK & SAVE HIGH SCORE
             if (score > highScore) {
                 highScore = score;
-                localStorage.setItem('catchGame_highScore', highScore); // Saves to device
+                localStorage.setItem('catchGame_highScore', highScore);
                 highscoreDisplay.innerText = "🏆 Best: " + highScore;
                 highScoreNotice.style.display = 'block';
             } else {
                 highScoreNotice.style.display = 'none';
             }
 
-            gameOverScreen.style.display = 'flex';
+            showScreen('game-over-screen');
         }
 
         function resetGame() {
-            cancelAnimationFrame(animationFrameId); 
-            score = 0;
-            lives = 3;
-            speed = 4;
-            isPlaying = true;
-            scoreDisplay.innerText = "Score: 0";
-            livesDisplay.innerText = "Lives: 3";
-            gameOverScreen.style.display = 'none';
-            spawnItem();
-            gameLoop();
+            hideAllScreens();
+            startGameSession();
         }
-
-        spawnItem();
-        gameLoop();
     </script>
 </body>
 </html>
