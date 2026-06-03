@@ -143,9 +143,16 @@
         <div id="main-menu-screen" class="screen-overlay">
             <h1 style="color: #FFD700; margin-bottom: 20px;">Catch Coins!</h1>
             <button class="menu-btn btn-green" onclick="pressContinue()">Continue</button>
-            <button class="menu-btn btn-orange" onclick="pressNewGame()">New Game</button>
+            <button class="menu-btn btn-orange" onclick="showScreen('confirm-screen')">New Game</button>
             <button class="menu-btn btn-blue" onclick="showScreen('info-screen')">Info</button>
-            </div>
+        </div>
+
+        <div id="confirm-screen" class="screen-overlay" style="display: none;">
+            <h2 style="color: #ff9800;">Are you sure?</h2>
+            <p class="info-text">This will permanently delete your High Score and all your Total Coins stats!</p>
+            <button class="menu-btn btn-red" onclick="executeReset()">Yes, Reset Everything</button>
+            <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">No, Go Back</button>
+        </div>
 
         <div id="info-screen" class="screen-overlay" style="display: none;">
             <h2>How to Play</h2>
@@ -162,7 +169,7 @@
         </div>
     </div>
 
-    <script>
+    <script {is_custom_code="true"}>
         const container = document.getElementById('game-container');
         const basket = document.getElementById('basket');
         const item = document.getElementById('item');
@@ -173,8 +180,8 @@
         const finalScore = document.getElementById('final-score');
         const highScoreNotice = document.getElementById('high-score-notice');
 
-        // Screen Elements
-        const screens = ['main-menu-screen', 'info-screen', 'game-over-screen'];
+        // Screen Elements (Added confirm-screen here)
+        const screens = ['main-menu-screen', 'confirm-screen', 'info-screen', 'game-over-screen'];
 
         let score = 0;
         let lives = 3;
@@ -182,7 +189,7 @@
         let itemX = 190;
         let itemY = -40;
         let speed = 4;
-        let isPlaying = false; // Turned OFF by default so game waits at menu
+        let isPlaying = false; 
         let animationFrameId;
 
         const containerWidth = 400;
@@ -193,7 +200,6 @@
         let highScore = localStorage.getItem('catchGame_highScore') ? parseInt(localStorage.getItem('catchGame_highScore')) : 0;
         let totalCoins = localStorage.getItem('catchGame_totalCoins') ? parseInt(localStorage.getItem('catchGame_totalCoins')) : 0;
 
-        // Render stats on UI immediately
         highscoreDisplay.innerText = "🏆 Best: " + highScore;
         coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
 
@@ -228,22 +234,20 @@
 
         // MENU BUTTON LOGIC
         function pressContinue() {
-            // Closes menu and drops you back right where your total stats left off
             hideAllScreens();
             startGameSession();
         }
 
-        function pressNewGame() {
-            if(confirm("Are you sure you want to reset ALL your personal profile stats, high scores, and coins?")) {
-                localStorage.setItem('catchGame_highScore', 0);
-                localStorage.setItem('catchGame_totalCoins', 0);
-                highScore = 0;
-                totalCoins = 0;
-                highscoreDisplay.innerText = "🏆 Best: 0";
-                coinsDisplay.innerText = "💰 Total Coins: 0";
-                hideAllScreens();
-                startGameSession();
-            }
+        // Triggered only if they confirm on the safety screen
+        function executeReset() {
+            localStorage.setItem('catchGame_highScore', 0);
+            localStorage.setItem('catchGame_totalCoins', 0);
+            highScore = 0;
+            totalCoins = 0;
+            highscoreDisplay.innerText = "🏆 Best: 0";
+            coinsDisplay.innerText = "💰 Total Coins: 0";
+            hideAllScreens();
+            startGameSession();
         }
 
         function hideAllScreens() {
