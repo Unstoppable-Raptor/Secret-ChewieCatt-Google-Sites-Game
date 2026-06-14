@@ -27,11 +27,15 @@
             height: 500px;
             min-width: 400px;
             min-height: 500px;
-            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+            /* Default background if no scores match */
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF); 
+            background-size: cover;
+            background-position: center;
             border: 4px solid #333;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: background 0.5s ease; /* Makes background swaps smooth! */
         }
         #basket {
             position: absolute;
@@ -67,6 +71,7 @@
             font-weight: bold;
             color: #333;
             pointer-events: none;
+            z-index: 10; /* Ensures UI text stays on top of any GIF */
         }
         .ui-row {
             display: flex;
@@ -149,7 +154,7 @@
 
         <div id="confirm-screen" class="screen-overlay" style="display: none;">
             <h2 style="color: #ff9800;">Are you sure?</h2>
-            <p class="-text">Whoa there Catt, this will permanently delete your High Score and all your Chewie Coins stats! All you're data will get sent to a digital trash bin realm, a place where you can never retrieve your stats ever again! ...Even Skinwalkers wouldn't dare to lurk there...</p>
+            <p class="info-text">Whoa there Catt, this will permanently delete your High Score and all your Chewie Coins stats! All you're data will get sent to a digital trash bin realm, a place where you can never retrieve your stats ever again! ...Even Skinwalkers wouldn't dare to lurk there...</p>
             <button class="menu-btn btn-red" onclick="executeReset()">Yes, Reset Everything</button>
             <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">No, Go Back</button>
         </div>
@@ -169,7 +174,7 @@
         </div>
     </div>
 
-    <script {is_custom_code="true"}>
+    <script>
         const container = document.getElementById('game-container');
         const basket = document.getElementById('basket');
         const item = document.getElementById('item');
@@ -180,7 +185,6 @@
         const finalScore = document.getElementById('final-score');
         const highScoreNotice = document.getElementById('high-score-notice');
 
-        // Screen Elements (Added confirm-screen here)
         const screens = ['main-menu-screen', 'confirm-screen', 'info-screen', 'game-over-screen'];
 
         let score = 0;
@@ -195,6 +199,23 @@
         const containerWidth = 400;
         const containerHeight = 500;
         const basketWidth = 60;
+
+        // 🛠️ BACKGROUND CONFIGURATION LIST
+        // You can add as many or as few ranges as you want here!
+        const backgroundsConfig = [
+    // 1. A custom purple-to-blue gradient for score 0 - 290
+    { minScore: 0, maxScore: 290, image: "linear-gradient(to bottom, #7B1FA2, #E1BEE7)" },
+
+    // 2. An animated GIF for score 300 - 490
+    { minScore: 300, maxScore: 490, image: "url('https://media.giphy.com/media/your-cool-gif/giphy.gif')" },
+
+    // 3. A solid crimson red background for score 500 - 590
+    { minScore: 500, maxScore: 590, image: "#d32f2f" },
+
+    // 4. A dark neon/cyberpunk gradient for score 600+
+    { minScore: 600, maxScore: Infinity, image: "linear-gradient(135deg, #00F2FE, #4FACFE)" }
+];
+        // Note: Use 'Infinity' for the last stage if you want it to go on forever.
 
         // LOAD PERSISTENT DATA
         let highScore = localStorage.getItem('catchGame_highScore') ? parseInt(localStorage.getItem('catchGame_highScore')) : 0;
@@ -232,13 +253,25 @@
             });
         }
 
+        // BACKGROUND ENGINE
+        function updateBackground() {
+            // Find the background item where the current score fits inside the min and max limits
+            const currentBg = backgroundsConfig.find(bg => score >= bg.minScore && score <= bg.maxScore);
+            
+            if (currentBg) {
+                container.style.backgroundImage = currentBg.image;
+            } else {
+                // Default fallback look if current score doesn't match a listed range
+                container.style.backgroundImage = "linear-gradient(to bottom, #87CEEB, #E0F6FF)";
+            }
+        }
+
         // MENU BUTTON LOGIC
         function pressContinue() {
             hideAllScreens();
             startGameSession();
         }
 
-        // Triggered only if they confirm on the safety screen
         function executeReset() {
             localStorage.setItem('catchGame_highScore', 0);
             localStorage.setItem('catchGame_totalCoins', 0);
@@ -270,6 +303,7 @@
             isPlaying = true;
             scoreDisplay.innerText = "Score: 0";
             livesDisplay.innerText = "Lives: 3";
+            updateBackground(); // Set initial background on start
             spawnItem();
             gameLoop();
         }
@@ -288,6 +322,8 @@
                     coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
                     scoreDisplay.innerText = "Score: " + score;
                     speed += 0.3; 
+                    
+                    updateBackground(); // Check if background needs changing upon scoring
                     spawnItem();
                 }
             }
