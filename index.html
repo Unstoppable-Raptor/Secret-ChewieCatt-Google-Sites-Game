@@ -27,7 +27,6 @@
             height: 500px;
             min-width: 400px;
             min-height: 500px;
-            /* Default background if no scores match */
             background: linear-gradient(to bottom, #87CEEB, #E0F6FF); 
             background-size: cover;
             background-position: center;
@@ -35,7 +34,7 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            transition: background 0.5s ease; /* Makes background swaps smooth! */
+            transition: background 0.5s ease;
         }
         #basket {
             position: absolute;
@@ -57,7 +56,21 @@
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            border-radius: 0%; 
+        }
+        /* New styling selector layer for falling special items */
+        #special-item {
+            position: absolute;
+            top: -40px;
+            left: 190px;
+            width: 40px;
+            height: 40px;
+            font-size: 32px;
+            text-align: center;
+            line-height: 40px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: none;
         }
         #ui-layer {
             position: absolute;
@@ -71,7 +84,7 @@
             font-weight: bold;
             color: #333;
             pointer-events: none;
-            z-index: 10; /* Ensures UI text stays on top of any GIF */
+            z-index: 10;
         }
         .ui-row {
             display: flex;
@@ -110,7 +123,6 @@
         }
         .menu-btn:active { transform: scale(0.98); }
         
-        /* Color themes for buttons */
         .btn-green { background-color: #4CAF50; }
         .btn-green:hover { background-color: #45a049; }
         .btn-orange { background-color: #ff9800; }
@@ -119,12 +131,56 @@
         .btn-blue:hover { background-color: #0b7dda; }
         .btn-red { background-color: #f44336; }
         .btn-red:hover { background-color: #da190b; }
+        .btn-purple { background-color: #9c27b0; }
+        .btn-purple:hover { background-color: #7b1fa2; }
         
         p.info-text {
             font-size: 14px;
             line-height: 1.5;
             margin: 15px 0;
             max-width: 300px;
+        }
+
+        /* Collectibles Visual Grid Layout */
+        #collectibles-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            max-height: 220px;
+            overflow-y: auto;
+            margin: 15px 0;
+            width: 100%;
+            padding: 5px;
+        }
+        .collectible-slot {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px dashed #aaa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .collectible-slot.unlocked {
+            background: rgba(255, 215, 0, 0.15);
+            border: 2px solid #FFD700;
+        }
+        .collectible-slot:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        #inspect-display-box {
+            width: 60px;
+            height: 60px;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
         }
     </style>
 </head>
@@ -143,18 +199,32 @@
         </div>
         
         <div id="item"></div>
-        <div id="basket"></div>
+        <div id="special-item"></div> <div id="basket"></div>
 
         <div id="main-menu-screen" class="screen-overlay">
             <h1 style="color: #FFD700; margin-bottom: 20px;">Catch Coins!</h1>
             <button class="menu-btn btn-green" onclick="pressContinue()">Continue</button>
+            <button class="menu-btn btn-purple" onclick="openCollectiblesMenu()">Collectibles</button>
             <button class="menu-btn btn-orange" onclick="showScreen('confirm-screen')">New Game</button>
             <button class="menu-btn btn-blue" onclick="showScreen('info-screen')">Info</button>
         </div>
 
+        <div id="collectibles-screen" class="screen-overlay" style="display: none;">
+            <h2 style="color: #FFD700;">Your Collectibles</h2>
+            <div id="collectibles-grid"></div>
+            <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">Back to Menu</button>
+        </div>
+
+        <div id="inspect-screen" class="screen-overlay" style="display: none;">
+            <h2 id="inspect-title" style="color: #FFD700;">Locked Item</h2>
+            <div id="inspect-display-box"></div>
+            <p id="inspect-description" class="info-text">You haven't discovered this item yet. Keep playing!</p>
+            <button class="menu-btn btn-blue" onclick="showScreen('collectibles-screen')">Back</button>
+        </div>
+
         <div id="confirm-screen" class="screen-overlay" style="display: none;">
             <h2 style="color: #ff9800;">Are you sure?</h2>
-            <p class="info-text">Whoa there Catt, this will permanently delete your High Score and all your Chewie Coins stats! All you're data will get sent to a digital trash bin realm, a place where you can never retrieve your stats ever again! ...Even Skinwalkers wouldn't dare to lurk there...</p>
+            <p class="info-text">Whoa there Catt, this will permanently delete your High Score and all your Chewie Coins stats! All your data will get sent to a digital trash bin realm, a place where you can never retrieve your stats ever again! ...Even Skinwalkers wouldn't dare to lurk there...</p>
             <button class="menu-btn btn-red" onclick="executeReset()">Yes, Reset Everything</button>
             <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">No, Go Back</button>
         </div>
@@ -178,6 +248,8 @@
         const container = document.getElementById('game-container');
         const basket = document.getElementById('basket');
         const item = document.getElementById('item');
+        const specialItemNode = document.getElementById('special-item');
+        
         const scoreDisplay = document.getElementById('score-display');
         const livesDisplay = document.getElementById('lives-display');
         const highscoreDisplay = document.getElementById('highscore-display');
@@ -185,7 +257,7 @@
         const finalScore = document.getElementById('final-score');
         const highScoreNotice = document.getElementById('high-score-notice');
 
-        const screens = ['main-menu-screen', 'confirm-screen', 'info-screen', 'game-over-screen'];
+        const screens = ['main-menu-screen', 'confirm-screen', 'info-screen', 'game-over-screen', 'collectibles-screen', 'inspect-screen'];
 
         let score = 0;
         let lives = 3;
@@ -200,26 +272,34 @@
         const containerHeight = 500;
         const basketWidth = 60;
 
-        // 🛠️ BACKGROUND CONFIGURATION LIST
-        // You can add as many or as few ranges as you want here!
+        // 🛠️ COLLECTIBLES CONFIGURATION BLOCK
+        // You can add emojis or complete base64 image strings inside the visual property.
+        const collectiblesConfig = [
+            { id: "skinwalker_totem", name: "Skinwalker Totem", visual: "💀", isEmoji: true, minScore: 70, maxScore: 100, dropChance: 0.60, desc: "A creepy totem left behind near the digital trash bin realm. It radiates a cold, strange aura." },
+            { id: "golden_ticket", name: "Golden Pass", visual: "🎫", isEmoji: true, minScore: 150, maxScore: 250, dropChance: 0.50, desc: "An exclusive golden admission ticket. Legend says it unlocks hidden arcade features." },
+            { id: "diamond_ring", name: "Chewie Diamond", visual: "💎", isEmoji: true, minScore: 300, maxScore: 500, dropChance: 0.40, desc: "An incredibly rare gem forged deep within the coin matrix. Exceptionally bright!" }
+        ];
+
+        // Special item operational engine states
+        let activeSpecialItem = null;
+        let specialX = 0;
+        let specialY = -40;
+        let specialSpeed = 4.5;
+        let specialSpawnedThisRange = false;
+
         const backgroundsConfig = [
-    // 1. A custom purple-to-blue gradient for score 0 - 290
-    { minScore: 0, maxScore: 290, image: "linear-gradient(to bottom, #7B1FA2, #E1BEE7)" },
-
-    // 2. An animated GIF for score 300 - 490
-    { minScore: 300, maxScore: 490, image: "url('https://media.giphy.com/media/your-cool-gif/giphy.gif')" },
-
-    // 3. A solid crimson red background for score 500 - 590
-    { minScore: 500, maxScore: 590, image: "#d32f2f" },
-
-    // 4. A dark neon/cyberpunk gradient for score 600+
-    { minScore: 600, maxScore: Infinity, image: "linear-gradient(135deg, #00F2FE, #4FACFE)" }
-];
-        // Note: Use 'Infinity' for the last stage if you want it to go on forever.
+            { minScore: 0, maxScore: 290, image: "linear-gradient(to bottom, #7B1FA2, #E1BEE7)" },
+            { minScore: 300, maxScore: 490, image: "url('https://media.giphy.com/media/your-cool-gif/giphy.gif')" },
+            { minScore: 500, maxScore: 590, image: "#d32f2f" },
+            { minScore: 600, maxScore: Infinity, image: "linear-gradient(135deg, #00F2FE, #4FACFE)" }
+        ];
 
         // LOAD PERSISTENT DATA
         let highScore = localStorage.getItem('catchGame_highScore') ? parseInt(localStorage.getItem('catchGame_highScore')) : 0;
         let totalCoins = localStorage.getItem('catchGame_totalCoins') ? parseInt(localStorage.getItem('catchGame_totalCoins')) : 0;
+        
+        // Track collections locally via array maps
+        let unlockedCollectibles = localStorage.getItem('catchGame_unlocked') ? JSON.parse(localStorage.getItem('catchGame_unlocked')) : [];
 
         highscoreDisplay.innerText = "🏆 Best: " + highScore;
         coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
@@ -253,20 +333,63 @@
             });
         }
 
-        // BACKGROUND ENGINE
-        function updateBackground() {
-            // Find the background item where the current score fits inside the min and max limits
-            const currentBg = backgroundsConfig.find(bg => score >= bg.minScore && score <= bg.maxScore);
-            
-            if (currentBg) {
-                container.style.backgroundImage = currentBg.image;
-            } else {
-                // Default fallback look if current score doesn't match a listed range
-                container.style.backgroundImage = "linear-gradient(to bottom, #87CEEB, #E0F6FF)";
-            }
+        // DYNAMIC COLLECTIBLES WINDOW COMPILER
+        function openCollectiblesMenu() {
+            const grid = document.getElementById('collectibles-grid');
+            grid.innerHTML = ""; // Clear template nodes
+
+            collectiblesConfig.forEach((item) => {
+                const isUnlocked = unlockedCollectibles.includes(item.id);
+                const slot = document.createElement('div');
+                slot.className = "collectible-slot" + (isUnlocked ? " unlocked" : "");
+                
+                // Show asset if owned, otherwise conceal with a question mark
+                slot.innerText = isUnlocked ? (item.isEmoji ? item.visual : "") : "❓";
+                
+                if (!item.isEmoji && isUnlocked) {
+                    slot.style.backgroundImage = `url('${item.visual}')`;
+                }
+
+                // Handle item inspections
+                slot.onclick = () => inspectItem(item, isUnlocked);
+                grid.appendChild(slot);
+            });
+
+            showScreen('collectibles-screen');
         }
 
-        // MENU BUTTON LOGIC
+        function inspectItem(item, isUnlocked) {
+            const title = document.getElementById('inspect-title');
+            const box = document.getElementById('inspect-display-box');
+            const description = document.getElementById('inspect-description');
+
+            box.style.backgroundImage = "";
+            box.innerText = "";
+
+            if (isUnlocked) {
+                title.innerText = item.name;
+                description.innerText = item.desc;
+                if (item.isEmoji) {
+                    box.innerText = item.visual;
+                } else {
+                    box.style.backgroundImage = `url('${item.visual}')`;
+                }
+            } else {
+                title.innerText = "Unknown Item";
+                box.innerText = "❓";
+                description.innerText = "Target Score Profile: " + item.minScore + " - " + item.maxScore + ". Keep looking, drops aren't guaranteed!";
+            }
+
+            showScreen('inspect-screen');
+        }
+
+        // BACKGROUND ENGINE
+        function updateBackground() {
+            const currentBg = backgroundsConfig.find(bg => score >= bg.minScore && score <= bg.maxScore);
+            container.style.backgroundImage = currentBg ? currentBg.image : "linear-gradient(to bottom, #87CEEB, #E0F6FF)";
+        }
+
+        // MAIN ACTION FLOW LOGIC
         function pressContinue() {
             hideAllScreens();
             startGameSession();
@@ -275,8 +398,10 @@
         function executeReset() {
             localStorage.setItem('catchGame_highScore', 0);
             localStorage.setItem('catchGame_totalCoins', 0);
+            localStorage.setItem('catchGame_unlocked', JSON.stringify([]));
             highScore = 0;
             totalCoins = 0;
+            unlockedCollectibles = [];
             highscoreDisplay.innerText = "🏆 Best: 0";
             coinsDisplay.innerText = "💰 Total Coins: 0";
             hideAllScreens();
@@ -295,15 +420,60 @@
             item.style.top = itemY + 'px';
         }
 
+        // EVALUATE SPECIAL ITEM ENTRANCES
+        function checkSpecialSpawn() {
+            if (activeSpecialItem) return; // Wait until current element resolves
+
+            // Look for configuration items mapping to the current active score tier
+            const potentialItem = collectiblesConfig.find(item => score >= item.minScore && score <= item.maxScore);
+
+            if (potentialItem) {
+                if (!specialSpawnedThisRange) {
+                    specialSpawnedThisRange = true; // Block multi-spawns within the exact matching tier
+                    
+                    // Evaluate the chance boundary profile (e.g., if dropChance is 0.60, it will spawn 60% of the time)
+                    if (Math.random() <= potentialItem.dropChance) {
+                        launchSpecialItem(potentialItem);
+                    }
+                }
+            } else {
+                // If the user's score advances outside the threshold, release the safety block for the next tier
+                specialSpawnedThisRange = false;
+            }
+        }
+
+        function launchSpecialItem(itemConfig) {
+            activeSpecialItem = itemConfig;
+            specialY = -40;
+            specialX = Math.floor(Math.random() * (containerWidth - 40));
+            
+            specialItemNode.style.backgroundImage = "";
+            specialItemNode.innerText = "";
+
+            if (itemConfig.isEmoji) {
+                specialItemNode.innerText = itemConfig.visual;
+            } else {
+                specialItemNode.style.backgroundImage = `url('${itemConfig.visual}')`;
+            }
+
+            specialItemNode.style.left = specialX + 'px';
+            specialItemNode.style.top = specialY + 'px';
+            specialItemNode.style.display = "block";
+        }
+
         function startGameSession() {
             cancelAnimationFrame(animationFrameId);
             score = 0;
             lives = 3;
             speed = 4;
             isPlaying = true;
+            activeSpecialItem = null;
+            specialSpawnedThisRange = false;
+            specialItemNode.style.display = "none";
+            
             scoreDisplay.innerText = "Score: 0";
             livesDisplay.innerText = "Lives: 3";
-            updateBackground(); // Set initial background on start
+            updateBackground(); 
             spawnItem();
             gameLoop();
         }
@@ -311,6 +481,7 @@
         function gameLoop() {
             if (!isPlaying) return;
 
+            // 1. Core Coin Physics
             itemY += speed;
             item.style.top = itemY + 'px';
 
@@ -323,7 +494,8 @@
                     scoreDisplay.innerText = "Score: " + score;
                     speed += 0.3; 
                     
-                    updateBackground(); // Check if background needs changing upon scoring
+                    updateBackground();
+                    checkSpecialSpawn(); // Check if this new score triggers a special item drop
                     spawnItem();
                 }
             }
@@ -331,18 +503,42 @@
             if (itemY > containerHeight) {
                 lives--;
                 livesDisplay.innerText = "Lives: " + lives;
-                if (lives <= 0) {
-                    endGame();
-                    return; 
-                } else {
-                    spawnItem();
+                if (lives <= 0) { getEndEngineResolution(); return; }
+                spawnItem();
+            }
+
+            // 2. Special Item Physics Processing Engine
+            if (activeSpecialItem) {
+                specialY += specialSpeed;
+                specialItemNode.style.top = specialY + 'px';
+
+                // Catch detection matching core rules
+                if (specialY >= (containerHeight - 50) && specialY <= (containerHeight - 10)) {
+                    if (specialX + 40 >= basketX && specialX <= basketX + basketWidth) {
+                        
+                        // Handle Unlocks cleanly without score modifiers
+                        if (!unlockedCollectibles.includes(activeSpecialItem.id)) {
+                            unlockedCollectibles.push(activeSpecialItem.id);
+                            localStorage.setItem('catchGame_unlocked', JSON.stringify(unlockedCollectibles));
+                        }
+
+                        // Remove from play space safely
+                        activeSpecialItem = null;
+                        specialItemNode.style.display = "none";
+                    }
+                }
+
+                // If missed, simply let it drop off screen completely without deducting a life
+                if (specialY > containerHeight) {
+                    activeSpecialItem = null;
+                    specialItemNode.style.display = "none";
                 }
             }
 
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
-        function endGame() {
+        function getEndEngineResolution() {
             isPlaying = false;
             cancelAnimationFrame(animationFrameId); 
             finalScore.innerText = "Final Score: " + score;
