@@ -57,7 +57,6 @@
             background-repeat: no-repeat;
             background-position: center;
         }
-        /* New styling selector layer for falling special items */
         #special-item {
             position: absolute;
             top: -40px;
@@ -141,7 +140,7 @@
             max-width: 300px;
         }
 
-        /* Collectibles Visual Grid Layout */
+        /* Collectibles Grid Layout */
         #collectibles-grid {
             display: flex;
             flex-wrap: wrap;
@@ -154,6 +153,7 @@
             padding: 5px;
         }
         .collectible-slot {
+            position: relative;
             width: 60px;
             height: 60px;
             background: rgba(255, 255, 255, 0.1);
@@ -173,6 +173,19 @@
         .collectible-slot:hover {
             background: rgba(255, 255, 255, 0.25);
         }
+        /* Small absolute count tag sitting on slots */
+        .slot-count-badge {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            background-color: #ff9800;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 1px 5px;
+            border-radius: 10px;
+            border: 1px solid #fff;
+        }
         #inspect-display-box {
             width: 60px;
             height: 60px;
@@ -181,6 +194,12 @@
             align-items: center;
             justify-content: center;
             font-size: 40px;
+        }
+        #inspect-counter-display {
+            font-size: 15px;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -199,7 +218,8 @@
         </div>
         
         <div id="item"></div>
-        <div id="special-item"></div> <div id="basket"></div>
+        <div id="special-item"></div> 
+        <div id="basket"></div>
 
         <div id="main-menu-screen" class="screen-overlay">
             <h1 style="color: #FFD700; margin-bottom: 20px;">Catch Coins!</h1>
@@ -218,13 +238,16 @@
         <div id="inspect-screen" class="screen-overlay" style="display: none;">
             <h2 id="inspect-title" style="color: #FFD700;">Locked Item</h2>
             <div id="inspect-display-box"></div>
+            <div id="inspect-counter-display">Owned: 0</div>
             <p id="inspect-description" class="info-text">You haven't discovered this item yet. Keep playing!</p>
-            <button class="menu-btn btn-blue" onclick="showScreen('collectibles-screen')">Back</button>
+            
+            <button id="sell-item-btn" class="menu-btn btn-orange" style="display: none; margin-bottom: 5px;">💰 Sell 1 for 30 Coins</button>
+            <button class="menu-btn btn-blue" onclick="openCollectiblesMenu()">Back</button>
         </div>
 
         <div id="confirm-screen" class="screen-overlay" style="display: none;">
             <h2 style="color: #ff9800;">Are you sure?</h2>
-            <p class="info-text">Whoa there Catt, this will permanently delete your High Score and all your Chewie Coins stats! All your data will get sent to a digital trash bin realm, a place where you can never retrieve your stats ever again! ...Even Skinwalkers wouldn't dare to lurk there...</p>
+            <p class="info-text">Whoa there Catt, this will permanently delete your High Score, all your Chewie Coins, and your entire Collectibles inventory!</p>
             <button class="menu-btn btn-red" onclick="executeReset()">Yes, Reset Everything</button>
             <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">No, Go Back</button>
         </div>
@@ -272,15 +295,14 @@
         const containerHeight = 500;
         const basketWidth = 60;
 
-        // 🛠️ COLLECTIBLES CONFIGURATION BLOCK
-        // You can add emojis or complete base64 image strings inside the visual property.
+        // 🛠️ CONFIGURATION ENGINE FOR SPECIAL ITEMS
+        // Adjust "sellValue" or "catchBonus" values below anytime you want to modify balances!
         const collectiblesConfig = [
-            { id: "skinwalker_totem", name: "Skinwalker Totem", visual: "💀", isEmoji: true, minScore: 70, maxScore: 100, dropChance: 0.60, desc: "A creepy totem left behind near the digital trash bin realm. It radiates a cold, strange aura." },
-            { id: "golden_ticket", name: "Golden Pass", visual: "🎫", isEmoji: true, minScore: 150, maxScore: 250, dropChance: 0.50, desc: "An exclusive golden admission ticket. Legend says it unlocks hidden arcade features." },
-            { id: "diamond_ring", name: "Chewie Diamond", visual: "💠", isEmoji: true, minScore: 300, maxScore: 500, dropChance: 0.40, desc: "An incredibly rare gem forged deep within the coin matrix. Exceptionally bright!" }
+            { id: "skinwalker_totem", name: "Skinwalker Totem", visual: "💀", isEmoji: true, minScore: 70, maxScore: 100, dropChance: 0.60, catchBonus: 10, sellValue: 30, desc: "A creepy totem left behind near the digital trash bin realm. It radiates a cold, strange aura." },
+            { id: "golden_ticket", name: "Golden Pass", visual: "🎫", isEmoji: true, minScore: 150, maxScore: 250, dropChance: 0.50, catchBonus: 10, sellValue: 50, desc: "An exclusive golden admission ticket. Legend says it unlocks hidden arcade features." },
+            { id: "diamond_ring", name: "Chewie Diamond", visual: "💎", isEmoji: true, minScore: 300, maxScore: 500, dropChance: 0.40, catchBonus: 10, sellValue: 100, desc: "An incredibly rare gem forged deep within the coin matrix. Exceptionally bright!" }
         ];
 
-        // Special item operational engine states
         let activeSpecialItem = null;
         let specialX = 0;
         let specialY = -40;
@@ -294,17 +316,22 @@
             { minScore: 600, maxScore: Infinity, image: "linear-gradient(135deg, #00F2FE, #4FACFE)" }
         ];
 
-        // LOAD PERSISTENT DATA
+        // LOAD SAVED STORAGE CORE DATA
         let highScore = localStorage.getItem('catchGame_highScore') ? parseInt(localStorage.getItem('catchGame_highScore')) : 0;
         let totalCoins = localStorage.getItem('catchGame_totalCoins') ? parseInt(localStorage.getItem('catchGame_totalCoins')) : 0;
         
-        // Track collections locally via array maps
-        let unlockedCollectibles = localStorage.getItem('catchGame_unlocked') ? JSON.parse(localStorage.getItem('catchGame_unlocked')) : [];
+        // Advanced Inventory Tracking Object System
+        let itemInventory = localStorage.getItem('catchGame_inventory') ? JSON.parse(localStorage.getItem('catchGame_inventory')) : {};
+
+        // Safety initialization loops to ensure newly added items are indexed properly
+        collectiblesConfig.forEach(c => {
+            if (itemInventory[c.id] === undefined) itemInventory[c.id] = 0;
+        });
 
         highscoreDisplay.innerText = "🏆 Best: " + highScore;
         coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
 
-        // CONTROLS
+        // PLAYER CONTROLS
         container.addEventListener('mousemove', (e) => {
             if (!isPlaying) return;
             const rect = container.getBoundingClientRect();
@@ -326,61 +353,105 @@
             e.preventDefault();
         }, { passive: false });
 
-        // SCREEN NAVIGATOR CONTROLLER
+        // VIEW WINDOW CONTROLLER
         function showScreen(screenId) {
             screens.forEach(id => {
                 document.getElementById(id).style.display = (id === screenId) ? 'flex' : 'none';
             });
         }
 
-        // DYNAMIC COLLECTIBLES WINDOW COMPILER
+        // GENERATE COLLECTIBLES INTERFACE
         function openCollectiblesMenu() {
             const grid = document.getElementById('collectibles-grid');
-            grid.innerHTML = ""; // Clear template nodes
+            grid.innerHTML = ""; 
 
             collectiblesConfig.forEach((item) => {
-                const isUnlocked = unlockedCollectibles.includes(item.id);
+                const count = itemInventory[item.id] || 0;
+                const isUnlocked = count > 0;
+                
                 const slot = document.createElement('div');
                 slot.className = "collectible-slot" + (isUnlocked ? " unlocked" : "");
                 
-                // Show asset if owned, otherwise conceal with a question mark
                 slot.innerText = isUnlocked ? (item.isEmoji ? item.visual : "") : "❓";
                 
                 if (!item.isEmoji && isUnlocked) {
                     slot.style.backgroundImage = `url('${item.visual}')`;
                 }
 
-                // Handle item inspections
-                slot.onclick = () => inspectItem(item, isUnlocked);
+                // Add visual stack badges if user holds more than 0 copies
+                if (isUnlocked) {
+                    const badge = document.createElement('span');
+                    badge.className = "slot-count-badge";
+                    badge.innerText = count;
+                    slot.appendChild(badge);
+                }
+
+                slot.onclick = () => inspectItem(item);
                 grid.appendChild(slot);
             });
 
             showScreen('collectibles-screen');
         }
 
-        function inspectItem(item, isUnlocked) {
+        // ELEMENT INSPECTOR AND TRADING PORTAL
+        function inspectItem(item) {
             const title = document.getElementById('inspect-title');
             const box = document.getElementById('inspect-display-box');
             const description = document.getElementById('inspect-description');
+            const countDisplay = document.getElementById('inspect-counter-display');
+            const sellBtn = document.getElementById('sell-item-btn');
 
             box.style.backgroundImage = "";
             box.innerText = "";
 
+            const count = itemInventory[item.id] || 0;
+            const isUnlocked = count > 0;
+
             if (isUnlocked) {
                 title.innerText = item.name;
                 description.innerText = item.desc;
+                countDisplay.innerText = "Owned: " + count;
+                
                 if (item.isEmoji) {
                     box.innerText = item.visual;
                 } else {
                     box.style.backgroundImage = `url('${item.visual}')`;
                 }
+
+                // Activate trade shop hook setup
+                sellBtn.style.display = "block";
+                sellBtn.innerText = `💰 Sell 1 for +${item.sellValue} Coins`;
+                sellBtn.onclick = () => executeItemSale(item);
             } else {
                 title.innerText = "Unknown Item";
                 box.innerText = "❓";
-                description.innerText = "Target Score Profile: " + item.minScore + " - " + item.maxScore + ". Keep looking, drops aren't guaranteed!";
+                countDisplay.innerText = "Owned: 0";
+                description.innerText = "Target Score Profile: " + item.minScore + " - " + item.maxScore + ". Catch this item to unlock its identity!";
+                sellBtn.style.display = "none";
             }
 
             showScreen('inspect-screen');
+        }
+
+        // TRANSACTION TRADING CONTROLLER
+        function executeItemSale(item) {
+            if (itemInventory[item.id] && itemInventory[item.id] > 0) {
+                // Deduct item count 
+                itemInventory[item.id]--;
+                
+                // Add financial trade reward
+                totalCoins += item.sellValue;
+                
+                // Sync modifications into browser cache storage
+                localStorage.setItem('catchGame_inventory', JSON.stringify(itemInventory));
+                localStorage.setItem('catchGame_totalCoins', totalCoins);
+                
+                // Refresh UI layers instantly
+                coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
+                
+                // Update active inspector dialog states immediately
+                inspectItem(item);
+            }
         }
 
         // BACKGROUND ENGINE
@@ -389,7 +460,7 @@
             container.style.backgroundImage = currentBg ? currentBg.image : "linear-gradient(to bottom, #87CEEB, #E0F6FF)";
         }
 
-        // MAIN ACTION FLOW LOGIC
+        // VIEWFLOW CONTROLLER INTERFACES
         function pressContinue() {
             hideAllScreens();
             startGameSession();
@@ -398,10 +469,16 @@
         function executeReset() {
             localStorage.setItem('catchGame_highScore', 0);
             localStorage.setItem('catchGame_totalCoins', 0);
-            localStorage.setItem('catchGame_unlocked', JSON.stringify([]));
+            
+            // Clear inventory counts entirely
+            const clearedInv = {};
+            collectiblesConfig.forEach(c => clearedInv[c.id] = 0);
+            localStorage.setItem('catchGame_inventory', JSON.stringify(clearedInv));
+            
             highScore = 0;
             totalCoins = 0;
-            unlockedCollectibles = [];
+            itemInventory = clearedInv;
+            
             highscoreDisplay.innerText = "🏆 Best: 0";
             coinsDisplay.innerText = "💰 Total Coins: 0";
             hideAllScreens();
@@ -420,24 +497,19 @@
             item.style.top = itemY + 'px';
         }
 
-        // EVALUATE SPECIAL ITEM ENTRANCES
         function checkSpecialSpawn() {
-            if (activeSpecialItem) return; // Wait until current element resolves
+            if (activeSpecialItem) return; 
 
-            // Look for configuration items mapping to the current active score tier
             const potentialItem = collectiblesConfig.find(item => score >= item.minScore && score <= item.maxScore);
 
             if (potentialItem) {
                 if (!specialSpawnedThisRange) {
-                    specialSpawnedThisRange = true; // Block multi-spawns within the exact matching tier
-                    
-                    // Evaluate the chance boundary profile (e.g., if dropChance is 0.60, it will spawn 60% of the time)
+                    specialSpawnedThisRange = true; 
                     if (Math.random() <= potentialItem.dropChance) {
                         launchSpecialItem(potentialItem);
                     }
                 }
             } else {
-                // If the user's score advances outside the threshold, release the safety block for the next tier
                 specialSpawnedThisRange = false;
             }
         }
@@ -481,7 +553,7 @@
         function gameLoop() {
             if (!isPlaying) return;
 
-            // 1. Core Coin Physics
+            // 1. Regular Coin Item Loop
             itemY += speed;
             item.style.top = itemY + 'px';
 
@@ -495,7 +567,7 @@
                     speed += 0.3; 
                     
                     updateBackground();
-                    checkSpecialSpawn(); // Check if this new score triggers a special item drop
+                    checkSpecialSpawn(); 
                     spawnItem();
                 }
             }
@@ -507,28 +579,32 @@
                 spawnItem();
             }
 
-            // 2. Special Item Physics Processing Engine
+            // 2. Special Item Runtime Physics Controller
             if (activeSpecialItem) {
                 specialY += specialSpeed;
                 specialItemNode.style.top = specialY + 'px';
 
-                // Catch detection matching core rules
                 if (specialY >= (containerHeight - 50) && specialY <= (containerHeight - 10)) {
                     if (specialX + 40 >= basketX && specialX <= basketX + basketWidth) {
                         
-                        // Handle Unlocks cleanly without score modifiers
-                        if (!unlockedCollectibles.includes(activeSpecialItem.id)) {
-                            unlockedCollectibles.push(activeSpecialItem.id);
-                            localStorage.setItem('catchGame_unlocked', JSON.stringify(unlockedCollectibles));
+                        // Increment item count tracking safely
+                        if (itemInventory[activeSpecialItem.id] === undefined) {
+                            itemInventory[activeSpecialItem.id] = 0;
                         }
+                        itemInventory[activeSpecialItem.id]++;
+                        localStorage.setItem('catchGame_inventory', JSON.stringify(itemInventory));
 
-                        // Remove from play space safely
+                        // Award direct custom catch bonus coins 
+                        totalCoins += activeSpecialItem.catchBonus;
+                        localStorage.setItem('catchGame_totalCoins', totalCoins);
+                        coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
+
+                        // Reset drop entity 
                         activeSpecialItem = null;
                         specialItemNode.style.display = "none";
                     }
                 }
 
-                // If missed, simply let it drop off screen completely without deducting a life
                 if (specialY > containerHeight) {
                     activeSpecialItem = null;
                     specialItemNode.style.display = "none";
