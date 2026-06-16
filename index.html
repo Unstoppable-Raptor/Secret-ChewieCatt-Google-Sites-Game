@@ -140,17 +140,17 @@
             max-width: 300px;
         }
 
-        /* Collectibles Grid Layout */
+        /* 🧩 LOCKED 4x3 GRID SYSTEM */
         #collectibles-grid {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(4, 60px); 
+            grid-template-rows: repeat(3, 60px);    
             gap: 15px;
             justify-content: center;
-            max-height: 220px;
-            overflow-y: auto;
-            margin: 15px 0;
+            align-content: center;
+            margin: 15px 0 5px 0;
             width: 100%;
-            padding: 5px;
+            min-height: 210px; 
         }
         .collectible-slot {
             position: relative;
@@ -173,7 +173,6 @@
         .collectible-slot:hover {
             background: rgba(255, 255, 255, 0.25);
         }
-        /* Small absolute count tag sitting on slots */
         .slot-count-badge {
             position: absolute;
             bottom: -2px;
@@ -186,6 +185,36 @@
             border-radius: 10px;
             border: 1px solid #fff;
         }
+        
+        /* Pagination Styles */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 285px;
+            margin-bottom: 5px;
+        }
+        .page-nav-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .page-nav-btn:disabled {
+            background: #555;
+            color: #888;
+            cursor: not-allowed;
+        }
+        #page-indicator {
+            font-size: 13px;
+            font-weight: bold;
+            color: #aaa;
+        }
+
         #inspect-display-box {
             width: 60px;
             height: 60px;
@@ -200,6 +229,27 @@
             font-weight: bold;
             color: #FFD700;
             margin-bottom: 5px;
+        }
+
+        /* 🎛️ DYNAMIC SLIDER LAYOUT ELEMENT */
+        #slider-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            width: 220px;
+            margin: 10px 0 2px 0;
+            background: rgba(255,255,255,0.08);
+            padding: 8px;
+            border-radius: 6px;
+        }
+        #slider-container label {
+            font-size: 12px;
+            color: #ccc;
+        }
+        #sell-quantity-slider {
+            width: 100%;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -231,7 +281,15 @@
 
         <div id="collectibles-screen" class="screen-overlay" style="display: none;">
             <h2 style="color: #FFD700;">Your Collectibles</h2>
+            
             <div id="collectibles-grid"></div>
+            
+            <div class="pagination-container">
+                <button id="prev-page-btn" class="page-nav-btn" onclick="changePage(-1)">◀ Prev</button>
+                <div id="page-indicator">Page 1 of 1</div>
+                <button id="next-page-btn" class="page-nav-btn" onclick="changePage(1)">Next ▶</button>
+            </div>
+
             <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">Back to Menu</button>
         </div>
 
@@ -241,13 +299,18 @@
             <div id="inspect-counter-display">Owned: 0</div>
             <p id="inspect-description" class="info-text">You haven't discovered this item yet. Keep playing!</p>
             
+            <div id="slider-container" style="display: none;">
+                <label id="slider-label">Amount to Sell: 1</label>
+                <input type="range" id="sell-quantity-slider" min="1" max="1" value="1">
+            </div>
+
             <button id="sell-item-btn" class="menu-btn btn-orange" style="display: none; margin-bottom: 5px;">💰 Sell 1 for 30 Coins</button>
-            <button class="menu-btn btn-blue" onclick="openCollectiblesMenu()">Back</button>
+            <button class="menu-btn btn-blue" onclick="showScreen('collectibles-screen')">Back</button>
         </div>
 
         <div id="confirm-screen" class="screen-overlay" style="display: none;">
             <h2 style="color: #ff9800;">Are you sure?</h2>
-            <p class="info-text">Whoa there Catt, this will permanently delete your High Score, all your Chewie Coins, and your entire Collectibles inventory!</p>
+            <p class="info-text">Whoa there Catt, this will permanently delete your High Score, all your Chewie Coins, and your entire Collectibles inventory! All you're data will get sent to a digital trash bin realm, a place where you can never retrieve your stats ever again! ...Even Skinwalkers wouldn't dare to lurk there... Well that's if they knew about this in the first place 👀</p>
             <button class="menu-btn btn-red" onclick="executeReset()">Yes, Reset Everything</button>
             <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">No, Go Back</button>
         </div>
@@ -296,12 +359,14 @@
         const basketWidth = 60;
 
         // 🛠️ CONFIGURATION ENGINE FOR SPECIAL ITEMS
-        // Adjust "sellValue" or "catchBonus" values below anytime you want to modify balances!
         const collectiblesConfig = [
             { id: "skinwalker_totem", name: "Skinwalker Totem", visual: "💀", isEmoji: true, minScore: 70, maxScore: 100, dropChance: 0.60, catchBonus: 10, sellValue: 30, desc: "A creepy totem left behind near the digital trash bin realm. It radiates a cold, strange aura." },
             { id: "golden_ticket", name: "Golden Pass", visual: "🎫", isEmoji: true, minScore: 150, maxScore: 250, dropChance: 0.50, catchBonus: 10, sellValue: 50, desc: "An exclusive golden admission ticket. Legend says it unlocks hidden arcade features." },
-            { id: "diamond_ring", name: "Chewie Diamond", visual: "💎", isEmoji: true, minScore: 300, maxScore: 500, dropChance: 0.40, catchBonus: 10, sellValue: 100, desc: "An incredibly rare gem forged deep within the coin matrix. Exceptionally bright!" }
+            { id: "diamond_ring", name: "The Admingers Icon", visual: "💠", isEmoji: true, minScore: 300, maxScore: 500, dropChance: 0.40, catchBonus: 10, sellValue: 100, desc: "An incredibly rare gem forged deep within the coin matrix. Exceptionally bright!" }
         ];
+
+        let currentPage = 0; 
+        const itemsPerPage = 12; 
 
         let activeSpecialItem = null;
         let specialX = 0;
@@ -319,11 +384,8 @@
         // LOAD SAVED STORAGE CORE DATA
         let highScore = localStorage.getItem('catchGame_highScore') ? parseInt(localStorage.getItem('catchGame_highScore')) : 0;
         let totalCoins = localStorage.getItem('catchGame_totalCoins') ? parseInt(localStorage.getItem('catchGame_totalCoins')) : 0;
-        
-        // Advanced Inventory Tracking Object System
         let itemInventory = localStorage.getItem('catchGame_inventory') ? JSON.parse(localStorage.getItem('catchGame_inventory')) : {};
 
-        // Safety initialization loops to ensure newly added items are indexed properly
         collectiblesConfig.forEach(c => {
             if (itemInventory[c.id] === undefined) itemInventory[c.id] = 0;
         });
@@ -353,32 +415,38 @@
             e.preventDefault();
         }, { passive: false });
 
-        // VIEW WINDOW CONTROLLER
         function showScreen(screenId) {
             screens.forEach(id => {
                 document.getElementById(id).style.display = (id === screenId) ? 'flex' : 'none';
             });
         }
 
-        // GENERATE COLLECTIBLES INTERFACE
         function openCollectiblesMenu() {
+            currentPage = 0; 
+            renderGridPage();
+            showScreen('collectibles-screen');
+        }
+
+        function renderGridPage() {
             const grid = document.getElementById('collectibles-grid');
             grid.innerHTML = ""; 
 
-            collectiblesConfig.forEach((item) => {
+            const startIndex = currentPage * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const itemsToDisplay = collectiblesConfig.slice(startIndex, endIndex);
+
+            itemsToDisplay.forEach((item) => {
                 const count = itemInventory[item.id] || 0;
                 const isUnlocked = count > 0;
                 
                 const slot = document.createElement('div');
                 slot.className = "collectible-slot" + (isUnlocked ? " unlocked" : "");
-                
                 slot.innerText = isUnlocked ? (item.isEmoji ? item.visual : "") : "❓";
                 
                 if (!item.isEmoji && isUnlocked) {
                     slot.style.backgroundImage = `url('${item.visual}')`;
                 }
 
-                // Add visual stack badges if user holds more than 0 copies
                 if (isUnlocked) {
                     const badge = document.createElement('span');
                     badge.className = "slot-count-badge";
@@ -390,16 +458,29 @@
                 grid.appendChild(slot);
             });
 
-            showScreen('collectibles-screen');
+            const totalPages = Math.max(1, Math.ceil(collectiblesConfig.length / itemsPerPage));
+            document.getElementById('page-indicator').innerText = `Page ${currentPage + 1} of ${totalPages}`;
+            
+            document.getElementById('prev-page-btn').disabled = (currentPage === 0);
+            document.getElementById('next-page-btn').disabled = (currentPage >= totalPages - 1);
         }
 
-        // ELEMENT INSPECTOR AND TRADING PORTAL
+        function changePage(direction) {
+            currentPage += direction;
+            renderGridPage();
+        }
+
+        // ELEMENT INSPECTOR & TRANSACTION QUANTITY LISTENER
         function inspectItem(item) {
             const title = document.getElementById('inspect-title');
             const box = document.getElementById('inspect-display-box');
             const description = document.getElementById('inspect-description');
             const countDisplay = document.getElementById('inspect-counter-display');
             const sellBtn = document.getElementById('sell-item-btn');
+            
+            const sliderContainer = document.getElementById('slider-container');
+            const slider = document.getElementById('sell-quantity-slider');
+            const sliderLabel = document.getElementById('slider-label');
 
             box.style.backgroundImage = "";
             box.innerText = "";
@@ -418,39 +499,57 @@
                     box.style.backgroundImage = `url('${item.visual}')`;
                 }
 
-                // Activate trade shop hook setup
                 sellBtn.style.display = "block";
-                sellBtn.innerText = `💰 Sell 1 for +${item.sellValue} Coins`;
-                sellBtn.onclick = () => executeItemSale(item);
+
+                // Setup Slider Params dynamically if inventory stacks high
+                if (count > 1) {
+                    sliderContainer.style.display = "flex";
+                    slider.max = count;
+                    slider.min = 1;
+                    slider.value = 1; // Default back to selling 1
+                    sliderLabel.innerText = "Amount to Sell: 1";
+                    sellBtn.innerText = `💰 Sell 1 for +${item.sellValue} Coins`;
+
+                    // Update live trade math text when slider shifts
+                    slider.oninput = function() {
+                        const amt = parseInt(this.value);
+                        sliderLabel.innerText = `Amount to Sell: ${amt === count ? 'All (' + amt + ')' : amt}`;
+                        sellBtn.innerText = `💰 Sell ${amt} for +${amt * item.sellValue} Coins`;
+                    };
+                } else {
+                    // Hide range option slider completely if user only owns 1 item
+                    sliderContainer.style.display = "none";
+                    sellBtn.innerText = `💰 Sell 1 for +${item.sellValue} Coins`;
+                }
+
+                sellBtn.onclick = () => {
+                    const sellAmount = sliderContainer.style.display === "flex" ? parseInt(slider.value) : 1;
+                    executeItemSale(item, sellAmount);
+                    renderGridPage(); 
+                };
             } else {
                 title.innerText = "Unknown Item";
                 box.innerText = "❓";
                 countDisplay.innerText = "Owned: 0";
-                description.innerText = "Target Score Profile: " + item.minScore + " - " + item.maxScore + ". Catch this item to unlock its identity!";
+                description.innerText = "Target Score Profile: " + item.minScore + " - " + item.maxScore + ". Catch this item to unlock its identity! Keep looking though, drops aren't always gauranteed!";
                 sellBtn.style.display = "none";
+                sliderContainer.style.display = "none";
             }
 
             showScreen('inspect-screen');
         }
 
-        // TRANSACTION TRADING CONTROLLER
-        function executeItemSale(item) {
-            if (itemInventory[item.id] && itemInventory[item.id] > 0) {
-                // Deduct item count 
-                itemInventory[item.id]--;
+        // EXECUTE SCALED TRANSACTION TRADES
+        function executeItemSale(item, amount) {
+            if (itemInventory[item.id] && itemInventory[item.id] >= amount) {
+                itemInventory[item.id] -= amount;
+                totalCoins += (item.sellValue * amount);
                 
-                // Add financial trade reward
-                totalCoins += item.sellValue;
-                
-                // Sync modifications into browser cache storage
                 localStorage.setItem('catchGame_inventory', JSON.stringify(itemInventory));
                 localStorage.setItem('catchGame_totalCoins', totalCoins);
-                
-                // Refresh UI layers instantly
                 coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
                 
-                // Update active inspector dialog states immediately
-                inspectItem(item);
+                inspectItem(item); // Refresh card state
             }
         }
 
@@ -460,7 +559,6 @@
             container.style.backgroundImage = currentBg ? currentBg.image : "linear-gradient(to bottom, #87CEEB, #E0F6FF)";
         }
 
-        // VIEWFLOW CONTROLLER INTERFACES
         function pressContinue() {
             hideAllScreens();
             startGameSession();
@@ -470,7 +568,6 @@
             localStorage.setItem('catchGame_highScore', 0);
             localStorage.setItem('catchGame_totalCoins', 0);
             
-            // Clear inventory counts entirely
             const clearedInv = {};
             collectiblesConfig.forEach(c => clearedInv[c.id] = 0);
             localStorage.setItem('catchGame_inventory', JSON.stringify(clearedInv));
@@ -480,7 +577,7 @@
             itemInventory = clearedInv;
             
             highscoreDisplay.innerText = "🏆 Best: 0";
-            coinsDisplay.innerText = "💰 Total Coins: 0";
+            coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
             hideAllScreens();
             startGameSession();
         }
@@ -553,7 +650,6 @@
         function gameLoop() {
             if (!isPlaying) return;
 
-            // 1. Regular Coin Item Loop
             itemY += speed;
             item.style.top = itemY + 'px';
 
@@ -579,27 +675,22 @@
                 spawnItem();
             }
 
-            // 2. Special Item Runtime Physics Controller
             if (activeSpecialItem) {
                 specialY += specialSpeed;
                 specialItemNode.style.top = specialY + 'px';
 
                 if (specialY >= (containerHeight - 50) && specialY <= (containerHeight - 10)) {
                     if (specialX + 40 >= basketX && specialX <= basketX + basketWidth) {
-                        
-                        // Increment item count tracking safely
                         if (itemInventory[activeSpecialItem.id] === undefined) {
                             itemInventory[activeSpecialItem.id] = 0;
                         }
                         itemInventory[activeSpecialItem.id]++;
                         localStorage.setItem('catchGame_inventory', JSON.stringify(itemInventory));
 
-                        // Award direct custom catch bonus coins 
                         totalCoins += activeSpecialItem.catchBonus;
                         localStorage.setItem('catchGame_totalCoins', totalCoins);
                         coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
 
-                        // Reset drop entity 
                         activeSpecialItem = null;
                         specialItemNode.style.display = "none";
                     }
