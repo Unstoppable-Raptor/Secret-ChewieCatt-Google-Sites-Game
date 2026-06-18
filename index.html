@@ -71,6 +71,22 @@
             background-position: center;
             display: none;
         }
+        /* 💖 HEART RUNTIME STYLING ELEMENT */
+        #heart-item {
+            position: absolute;
+            top: -40px;
+            left: 190px;
+            width: 40px;
+            height: 40px;
+            font-size: 32px;
+            text-align: center;
+            line-height: 40px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: none;
+            z-index: 5;
+        }
         #ui-layer {
             position: absolute;
             top: 10px;
@@ -269,7 +285,7 @@
         
         <div id="item"></div>
         <div id="special-item"></div> 
-        <div id="basket"></div>
+        <div id="heart-item"></div> <div id="basket"></div>
 
         <div id="main-menu-screen" class="screen-overlay">
             <h1 style="color: #FFD700; margin-bottom: 20px;">Catch Coins!</h1>
@@ -335,6 +351,7 @@
         const basket = document.getElementById('basket');
         const item = document.getElementById('item');
         const specialItemNode = document.getElementById('special-item');
+        const heartNode = document.getElementById('heart-item');
         
         const scoreDisplay = document.getElementById('score-display');
         const livesDisplay = document.getElementById('lives-display');
@@ -364,6 +381,24 @@
             { id: "golden_ticket", name: "Golden Pass", visual: "🎫", isEmoji: true, minScore: 150, maxScore: 250, dropChance: 0.50, catchBonus: 10, sellValue: 50, desc: "An exclusive golden admission ticket. Legend says it unlocks hidden arcade features." },
             { id: "diamond_ring", name: "The Admingers Icon", visual: "💠", isEmoji: true, minScore: 300, maxScore: 500, dropChance: 0.40, catchBonus: 10, sellValue: 100, desc: "An incredibly rare gem forged deep within the coin matrix. Exceptionally bright!" }
         ];
+
+        // 🛠️ CONFIGURATION ENGINE FOR THE HEART DROP BALANCES
+        // You can change the scores or the visual representation right here!
+        const heartConfig = {
+            visual: "💗", 
+            isEmoji: true,
+            chanceScoreStep: 200,   // Triggers a 50% roll every X points
+            guaranteedScoreStep: 500, // Triggers a 100% drop every Y points
+            dropChance: 0.50,        // 50% chance
+            speed: 5
+        };
+
+        // Active state trackers for the falling heart
+        let isHeartActive = false;
+        let heartX = 0;
+        let heartY = -40;
+        let lastChanceMilestone = 0;
+        let lastGuaranteedMilestone = 0;
 
         let currentPage = 0; 
         const itemsPerPage = 12; 
@@ -470,7 +505,6 @@
             renderGridPage();
         }
 
-        // ELEMENT INSPECTOR & TRANSACTION QUANTITY LISTENER
         function inspectItem(item) {
             const title = document.getElementById('inspect-title');
             const box = document.getElementById('inspect-display-box');
@@ -501,23 +535,20 @@
 
                 sellBtn.style.display = "block";
 
-                // Setup Slider Params dynamically if inventory stacks high
                 if (count > 1) {
                     sliderContainer.style.display = "flex";
                     slider.max = count;
                     slider.min = 1;
-                    slider.value = 1; // Default back to selling 1
+                    slider.value = 1; 
                     sliderLabel.innerText = "Amount to Sell: 1";
                     sellBtn.innerText = `💰 Sell 1 for +${item.sellValue} Coins`;
 
-                    // Update live trade math text when slider shifts
                     slider.oninput = function() {
                         const amt = parseInt(this.value);
                         sliderLabel.innerText = `Amount to Sell: ${amt === count ? 'All (' + amt + ')' : amt}`;
                         sellBtn.innerText = `💰 Sell ${amt} for +${amt * item.sellValue} Coins`;
                     };
                 } else {
-                    // Hide range option slider completely if user only owns 1 item
                     sliderContainer.style.display = "none";
                     sellBtn.innerText = `💰 Sell 1 for +${item.sellValue} Coins`;
                 }
@@ -531,7 +562,7 @@
                 title.innerText = "Unknown Item";
                 box.innerText = "❓";
                 countDisplay.innerText = "Owned: 0";
-                description.innerText = "Target Score Profile: " + item.minScore + " - " + item.maxScore + ". Catch this item to unlock its identity! Keep looking though, drops aren't always gauranteed!";
+                description.innerText = "Target Score Profile: " + item.minScore + " - " + item.maxScore + ". Catch this item to unlock its identity!";
                 sellBtn.style.display = "none";
                 sliderContainer.style.display = "none";
             }
@@ -539,7 +570,6 @@
             showScreen('inspect-screen');
         }
 
-        // EXECUTE SCALED TRANSACTION TRADES
         function executeItemSale(item, amount) {
             if (itemInventory[item.id] && itemInventory[item.id] >= amount) {
                 itemInventory[item.id] -= amount;
@@ -549,11 +579,10 @@
                 localStorage.setItem('catchGame_totalCoins', totalCoins);
                 coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
                 
-                inspectItem(item); // Refresh card state
+                inspectItem(item); 
             }
         }
 
-        // BACKGROUND ENGINE
         function updateBackground() {
             const currentBg = backgroundsConfig.find(bg => score >= bg.minScore && score <= bg.maxScore);
             container.style.backgroundImage = currentBg ? currentBg.image : "linear-gradient(to bottom, #87CEEB, #E0F6FF)";
@@ -586,7 +615,6 @@
             screens.forEach(id => document.getElementById(id).style.display = 'none');
         }
 
-        // GAMEPLAY ENGINE
         function spawnItem() {
             itemY = -40;
             itemX = Math.floor(Math.random() * (containerWidth - 40)); 
@@ -630,6 +658,49 @@
             specialItemNode.style.display = "block";
         }
 
+        // 💖 CORE SCORE ENGINE MODS FOR BALANCING HEART LIFELINES
+        function checkHeartDropMilestones() {
+            if (isHeartActive || score === 0) return;
+
+            // 1. Check for the Guaranteed 500-point Milestone
+            let currentGuaranteedStep = Math.floor(score / heartConfig.guaranteedScoreStep);
+            if (currentGuaranteedStep > lastGuaranteedMilestone) {
+                lastGuaranteedMilestone = currentGuaranteedStep;
+                // Sync the lower 200 step tracker so we don't double drop items on identical marks
+                lastChanceMilestone = Math.floor(score / heartConfig.chanceScoreStep); 
+                launchHeartItem();
+                return;
+            }
+
+            // 2. Check for the 50% Chance 200-point Milestone
+            let currentChanceStep = Math.floor(score / heartConfig.chanceScoreStep);
+            if (currentChanceStep > lastChanceMilestone) {
+                lastChanceMilestone = currentChanceStep;
+                if (Math.random() <= heartConfig.dropChance) {
+                    launchHeartItem();
+                }
+            }
+        }
+
+        function launchHeartItem() {
+            isHeartActive = true;
+            heartY = -40;
+            heartX = Math.floor(Math.random() * (containerWidth - 40));
+
+            heartNode.style.backgroundImage = "";
+            heartNode.innerText = "";
+
+            if (heartConfig.isEmoji) {
+                heartNode.innerText = heartConfig.visual;
+            } else {
+                heartNode.style.backgroundImage = `url('${heartConfig.visual}')`;
+            }
+
+            heartNode.style.left = heartX + 'px';
+            heartNode.style.top = heartY + 'px';
+            heartNode.style.display = "block";
+        }
+
         function startGameSession() {
             cancelAnimationFrame(animationFrameId);
             score = 0;
@@ -639,6 +710,12 @@
             activeSpecialItem = null;
             specialSpawnedThisRange = false;
             specialItemNode.style.display = "none";
+            
+            // Clear heart metrics completely
+            isHeartActive = false;
+            lastChanceMilestone = 0;
+            lastGuaranteedMilestone = 0;
+            heartNode.style.display = "none";
             
             scoreDisplay.innerText = "Score: 0";
             livesDisplay.innerText = "Lives: 3";
@@ -664,6 +741,7 @@
                     
                     updateBackground();
                     checkSpecialSpawn(); 
+                    checkHeartDropMilestones(); // Run heart trigger calculation loops!
                     spawnItem();
                 }
             }
@@ -699,6 +777,26 @@
                 if (specialY > containerHeight) {
                     activeSpecialItem = null;
                     specialItemNode.style.display = "none";
+                }
+            }
+
+            // 💖 RUNTIME PHYSIC LOGIC ENGINE FOR FALLING HEARTS
+            if (isHeartActive) {
+                heartY += heartConfig.speed;
+                heartNode.style.top = heartY + 'px';
+
+                if (heartY >= (containerHeight - 50) && heartY <= (containerHeight - 10)) {
+                    if (heartX + 40 >= basketX && heartX <= basketX + basketWidth) {
+                        lives++; // Reward the extra life player pool
+                        livesDisplay.innerText = "Lives: " + lives;
+                        isHeartActive = false;
+                        heartNode.style.display = "none";
+                    }
+                }
+
+                if (heartY > containerHeight) {
+                    isHeartActive = false;
+                    heartNode.style.display = "none";
                 }
             }
 
