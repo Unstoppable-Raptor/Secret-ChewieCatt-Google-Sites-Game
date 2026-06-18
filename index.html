@@ -390,7 +390,7 @@
             chanceScoreStep: 200,   // Triggers a 50% roll every X points
             guaranteedScoreStep: 500, // Triggers a 100% drop every Y points
             dropChance: 0.50,        // 50% chance
-            speed: 5
+            speed: 7
         };
 
         // Active state trackers for the falling heart
@@ -737,7 +737,7 @@
                     localStorage.setItem('catchGame_totalCoins', totalCoins);
                     coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
                     scoreDisplay.innerText = "Score: " + score;
-                    speed += 0.3; 
+                    speed += 0.2; 
                     
                     updateBackground();
                     checkSpecialSpawn(); 
