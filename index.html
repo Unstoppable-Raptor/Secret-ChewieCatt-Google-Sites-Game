@@ -39,12 +39,13 @@
         #basket {
             position: absolute;
             bottom: 10px;
-            left: 175px;
+            left: 170px;
             width: 60px;
             height: 20px;
             background-color: #8B4513;
             border-radius: 0 0 10px 10px;
             border-top: 5px solid #CD853F;
+            transition: width 0.2s ease; /* Smooth visual widening */
         }
         #item {
             position: absolute;
@@ -71,7 +72,6 @@
             background-position: center;
             display: none;
         }
-        /* 💖 HEART RUNTIME STYLING ELEMENT */
         #heart-item {
             position: absolute;
             top: -40px;
@@ -168,7 +168,21 @@
             width: 100%;
             min-height: 210px; 
         }
-        .collectible-slot {
+        
+        /* 🛒 SHOP 3x3 GRID SYSTEM */
+        #shop-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 65px); 
+            grid-template-rows: repeat(3, 65px);    
+            gap: 20px;
+            justify-content: center;
+            align-content: center;
+            margin: 15px 0 5px 0;
+            width: 100%;
+            min-height: 235px;
+        }
+        
+        .collectible-slot, .shop-slot {
             position: relative;
             width: 60px;
             height: 60px;
@@ -182,11 +196,17 @@
             cursor: pointer;
             transition: background 0.2s;
         }
+        .shop-slot {
+            width: 65px;
+            height: 65px;
+            border: 2px solid #2196F3;
+            background: rgba(33, 150, 243, 0.1);
+        }
         .collectible-slot.unlocked {
             background: rgba(255, 215, 0, 0.15);
             border: 2px solid #FFD700;
         }
-        .collectible-slot:hover {
+        .collectible-slot:hover, .shop-slot:hover {
             background: rgba(255, 255, 255, 0.25);
         }
         .slot-count-badge {
@@ -225,13 +245,13 @@
             color: #888;
             cursor: not-allowed;
         }
-        #page-indicator {
+        #page-indicator, #shop-page-indicator {
             font-size: 13px;
             font-weight: bold;
             color: #aaa;
         }
 
-        #inspect-display-box {
+        #inspect-display-box, #shop-inspect-display-box {
             width: 60px;
             height: 60px;
             margin: 10px auto;
@@ -240,7 +260,7 @@
             justify-content: center;
             font-size: 40px;
         }
-        #inspect-counter-display {
+        #inspect-counter-display, #shop-inspect-counter-display {
             font-size: 15px;
             font-weight: bold;
             color: #FFD700;
@@ -248,7 +268,7 @@
         }
 
         /* 🎛️ DYNAMIC SLIDER LAYOUT ELEMENT */
-        #slider-container {
+        #slider-container, #shop-slider-container {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -259,13 +279,27 @@
             padding: 8px;
             border-radius: 6px;
         }
-        #slider-container label {
+        #slider-container label, #shop-slider-container label {
             font-size: 12px;
             color: #ccc;
         }
-        #sell-quantity-slider {
+        #sell-quantity-slider, #buy-quantity-slider {
             width: 100%;
             cursor: pointer;
+        }
+        
+        /* Header balance display panel in store overlay */
+        .shop-header-balance {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #FFD700;
+            background: rgba(0,0,0,0.4);
+            padding: 4px 10px;
+            border-radius: 15px;
+            border: 1px solid #FFD700;
         }
     </style>
 </head>
@@ -285,12 +319,14 @@
         
         <div id="item"></div>
         <div id="special-item"></div> 
-        <div id="heart-item"></div> <div id="basket"></div>
+        <div id="heart-item"></div> 
+        <div id="basket"></div>
 
         <div id="main-menu-screen" class="screen-overlay">
             <h1 style="color: #FFD700; margin-bottom: 20px;">Catch Coins!</h1>
             <button class="menu-btn btn-green" onclick="pressContinue()">Continue</button>
             <button class="menu-btn btn-purple" onclick="openCollectiblesMenu()">Collectibles</button>
+            <button class="menu-btn btn-blue" onclick="openShopMenu()" style="background-color: #ffc107; color: #222;">Shop 🛒</button>
             <button class="menu-btn btn-orange" onclick="showScreen('confirm-screen')">New Game</button>
             <button class="menu-btn btn-blue" onclick="showScreen('info-screen')">Info</button>
         </div>
@@ -320,13 +356,43 @@
                 <input type="range" id="sell-quantity-slider" min="1" max="1" value="1">
             </div>
 
-            <button id="sell-item-btn" class="menu-btn btn-orange" style="display: none; margin-bottom: 5px;">💰 Sell 1 for 30 Coins</button>
+            <button id="sell-item-btn" class="menu-btn btn-orange" style="margin-bottom: 5px;">💰 Sell 1 for 30 Coins</button>
             <button class="menu-btn btn-blue" onclick="showScreen('collectibles-screen')">Back</button>
+        </div>
+
+        <div id="shop-screen" class="screen-overlay" style="display: none;">
+            <div id="shop-coins-display" class="shop-header-balance">💰 Coins: 0</div>
+            <h2 style="color: #FFD700; margin-top: 10px;">Power-Up Shop 🛒</h2>
+            
+            <div id="shop-grid"></div>
+            
+            <div class="pagination-container">
+                <button id="shop-prev-page-btn" class="page-nav-btn" onclick="changeShopPage(-1)">◀ Prev</button>
+                <div id="shop-page-indicator">Page 1 of 1</div>
+                <button id="shop-next-page-btn" class="page-nav-btn" onclick="changeShopPage(1)">Next ▶</button>
+            </div>
+
+            <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">Back to Menu</button>
+        </div>
+
+        <div id="shop-inspect-screen" class="screen-overlay" style="display: none;">
+            <h2 id="shop-inspect-title" style="color: #FFD700;">Item Name</h2>
+            <div id="shop-inspect-display-box"></div>
+            <div id="shop-inspect-counter-display">In Stock: 0 / 10</div>
+            <p id="shop-inspect-description" class="info-text">Item description goes here.</p>
+            
+            <div id="shop-slider-container" style="display: none;">
+                <label id="shop-slider-label">Amount to Buy: 1</label>
+                <input type="range" id="buy-quantity-slider" min="1" max="1" value="1">
+            </div>
+
+            <button id="buy-item-btn" class="menu-btn btn-green" style="margin-bottom: 5px;">🛒 Buy 1</button>
+            <button class="menu-btn btn-blue" onclick="showScreen('shop-screen')">Back</button>
         </div>
 
         <div id="confirm-screen" class="screen-overlay" style="display: none;">
             <h2 style="color: #ff9800;">Are you sure?</h2>
-            <p class="info-text">Whoa there Catt, this will permanently delete your High Score, all your Chewie Coins, and your entire Collectibles inventory! All you're data will get sent to a digital trash bin realm, a place where you can never retrieve your stats ever again! ...Even Skinwalkers wouldn't dare to lurk there... Well that's if they knew about this in the first place 👀</p>
+            <p class="info-text">Whoa there Catt, this will permanently delete your High Score, all your Chewie Coins, your entire Collectibles inventory, AND your Shop upgrades stockpile!</p>
             <button class="menu-btn btn-red" onclick="executeReset()">Yes, Reset Everything</button>
             <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">No, Go Back</button>
         </div>
@@ -360,7 +426,7 @@
         const finalScore = document.getElementById('final-score');
         const highScoreNotice = document.getElementById('high-score-notice');
 
-        const screens = ['main-menu-screen', 'confirm-screen', 'info-screen', 'game-over-screen', 'collectibles-screen', 'inspect-screen'];
+        const screens = ['main-menu-screen', 'confirm-screen', 'info-screen', 'game-over-screen', 'collectibles-screen', 'inspect-screen', 'shop-screen', 'shop-inspect-screen'];
 
         let score = 0;
         let lives = 3;
@@ -373,7 +439,10 @@
 
         const containerWidth = 400;
         const containerHeight = 500;
-        const basketWidth = 60;
+        let basketWidth = 60; // Changed to 'let' so powerups can alter dynamically
+
+        // Match-Active active modifier states
+        let activeX2Coins = false;
 
         // 🛠️ CONFIGURATION ENGINE FOR SPECIAL ITEMS
         const collectiblesConfig = [
@@ -382,18 +451,23 @@
             { id: "diamond_ring", name: "The Admingers Icon", visual: "💠", isEmoji: true, minScore: 300, maxScore: 500, dropChance: 0.40, catchBonus: 10, sellValue: 100, desc: "An (unoffical) Icon representing the Admin of the CCC." }
         ];
 
+        // 🛠️ SHOP ITEMS ENGINE CONFIGURATION (3x3 Grid Matrix)
+        const shopConfig = [
+            { id: "extra_life", name: "Extra Life", visual: "❤️", isEmoji: true, cost: 100, maxLimit: 10, desc: "Gives you an extra life when starting your next match. Consumed upon game launch." },
+            { id: "double_coin", name: "x2 Coins", visual: "🪙", isEmoji: true, cost: 200, maxLimit: 10, desc: "Doubles every standard coin caught during the run! Power-up expires when match ends." },
+            { id: "wide_basket", name: "Big Basket", visual: "🧺", isEmoji: true, cost: 600, maxLimit: 10, desc: "Stretches out your basket to double its horizontal layout size! Power-up expires when match ends." }
+        ];
+
         // 🛠️ CONFIGURATION ENGINE FOR THE HEART DROP BALANCES
-        // You can change the scores or the visual representation right here!
         const heartConfig = {
             visual: "💗", 
             isEmoji: true,
-            chanceScoreStep: 200,   // Triggers a 50% roll every X points
-            guaranteedScoreStep: 500, // Triggers a 100% drop every Y points
-            dropChance: 0.50,        // 50% chance
-            speed: 7
+            chanceScoreStep: 200,   
+            guaranteedScoreStep: 500, 
+            dropChance: 0.50,        
+            speed: 5
         };
 
-        // Active state trackers for the falling heart
         let isHeartActive = false;
         let heartX = 0;
         let heartY = -40;
@@ -402,6 +476,9 @@
 
         let currentPage = 0; 
         const itemsPerPage = 12; 
+        
+        let currentShopPage = 0;
+        const shopItemsPerPage = 9; // 3 columns x 3 rows matrix layout array splitter
 
         let activeSpecialItem = null;
         let specialX = 0;
@@ -420,9 +497,14 @@
         let highScore = localStorage.getItem('catchGame_highScore') ? parseInt(localStorage.getItem('catchGame_highScore')) : 0;
         let totalCoins = localStorage.getItem('catchGame_totalCoins') ? parseInt(localStorage.getItem('catchGame_totalCoins')) : 0;
         let itemInventory = localStorage.getItem('catchGame_inventory') ? JSON.parse(localStorage.getItem('catchGame_inventory')) : {};
+        let shopInventory = localStorage.getItem('catchGame_shopInventory') ? JSON.parse(localStorage.getItem('catchGame_shopInventory')) : {};
 
         collectiblesConfig.forEach(c => {
             if (itemInventory[c.id] === undefined) itemInventory[c.id] = 0;
+        });
+        
+        shopConfig.forEach(s => {
+            if (shopInventory[s.id] === undefined) shopInventory[s.id] = 0;
         });
 
         highscoreDisplay.innerText = "🏆 Best: " + highScore;
@@ -583,6 +665,147 @@
             }
         }
 
+        // 🛒 OPEN SHOP MENU LAYOUT ENGINE
+        function openShopMenu() {
+            currentShopPage = 0;
+            renderShopGridPage();
+            showScreen('shop-screen');
+        }
+
+        // 🛒 SHOP 3x3 RENDER LOGIC
+        function renderShopGridPage() {
+            document.getElementById('shop-coins-display').innerText = "💰 Coins: " + totalCoins;
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = "";
+
+            const startIndex = currentShopPage * shopItemsPerPage;
+            const endIndex = startIndex + shopItemsPerPage;
+            const itemsToDisplay = shopConfig.slice(startIndex, endIndex);
+
+            itemsToDisplay.forEach((shopItem) => {
+                const currentStock = shopInventory[shopItem.id] || 0;
+                
+                const slot = document.createElement('div');
+                slot.className = "shop-slot";
+                slot.innerText = shopItem.isEmoji ? shopItem.visual : "";
+                
+                if (!shopItem.isEmoji) {
+                    slot.style.backgroundImage = `url('${shopItem.visual}')`;
+                }
+
+                // Append small stock count labels if they already have stockpiles
+                if (currentStock > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = "slot-count-badge";
+                    badge.innerText = currentStock;
+                    slot.appendChild(badge);
+                }
+
+                slot.onclick = () => inspectShopItem(shopItem);
+                grid.appendChild(slot);
+            });
+
+            const totalPages = Math.max(1, Math.ceil(shopConfig.length / shopItemsPerPage));
+            document.getElementById('shop-page-indicator').innerText = `Page ${currentShopPage + 1} of ${totalPages}`;
+            
+            document.getElementById('shop-prev-page-btn').disabled = (currentShopPage === 0);
+            document.getElementById('shop-next-page-btn').disabled = (currentShopPage >= totalPages - 1);
+        }
+
+        function changeShopPage(direction) {
+            currentShopPage += direction;
+            renderShopGridPage();
+        }
+
+        // 🛒 SHOP ITEM DESCRIPTION MODAL CONTROLLER
+        function inspectShopItem(shopItem) {
+            const title = document.getElementById('shop-inspect-title');
+            const box = document.getElementById('shop-inspect-display-box');
+            const description = document.getElementById('shop-inspect-description');
+            const stockDisplay = document.getElementById('shop-inspect-counter-display');
+            const buyBtn = document.getElementById('buy-item-btn');
+            
+            const sliderContainer = document.getElementById('shop-slider-container');
+            const slider = document.getElementById('buy-quantity-slider');
+            const sliderLabel = document.getElementById('shop-slider-label');
+
+            box.style.backgroundImage = "";
+            box.innerText = "";
+
+            title.innerText = shopItem.name;
+            description.innerText = shopItem.desc;
+            
+            const currentStock = shopInventory[shopItem.id] || 0;
+            stockDisplay.innerText = `In Stock: ${currentStock} / ${shopItem.maxLimit}`;
+
+            if (shopItem.isEmoji) {
+                box.innerText = shopItem.visual;
+            } else {
+                box.style.backgroundImage = `url('${shopItem.visual}')`;
+            }
+
+            // Figure out mathematical room limits for maximum slider configurations
+            const spaceLeft = shopItem.maxLimit - currentStock;
+            const maxAffordable = Math.floor(totalCoins / shopItem.cost);
+            const absoluteMaxToBuy = Math.min(spaceLeft, maxAffordable);
+
+            if (absoluteMaxToBuy > 1) {
+                sliderContainer.style.display = "flex";
+                slider.min = 1;
+                slider.max = absoluteMaxToBuy;
+                slider.value = 1;
+                sliderLabel.innerText = "Amount to Buy: 1";
+                buyBtn.innerText = `🛒 Buy 1 for ${shopItem.cost} Coins`;
+
+                slider.oninput = function() {
+                    const amt = parseInt(this.value);
+                    sliderLabel.innerText = `Amount to Buy: ${amt === spaceLeft ? 'Max Cap (' + amt + ')' : amt}`;
+                    buyBtn.innerText = `🛒 Buy ${amt} for ${amt * shopItem.cost} Coins`;
+                };
+            } else {
+                sliderContainer.style.display = "none";
+                buyBtn.innerText = `🛒 Buy 1 for ${shopItem.cost} Coins`;
+            }
+
+            // Affordability check guardrails
+            if (spaceLeft <= 0) {
+                buyBtn.innerText = "❌ Max Limit Reached";
+                buyBtn.disabled = true;
+                sliderContainer.style.display = "none";
+            } else if (totalCoins < shopItem.cost) {
+                buyBtn.innerText = "❌ Too Expensive";
+                buyBtn.disabled = true;
+                sliderContainer.style.display = "none";
+            } else {
+                buyBtn.disabled = false;
+            }
+
+            buyBtn.onclick = () => {
+                const buyAmount = sliderContainer.style.display === "flex" ? parseInt(slider.value) : 1;
+                executeShopPurchase(shopItem, buyAmount);
+                renderShopGridPage();
+            };
+
+            showScreen('shop-inspect-screen');
+        }
+
+        // 🛒 PURCHASE EXECUTION & WALLET CALCULATIONS
+        function executeShopPurchase(shopItem, amount) {
+            const currentStock = shopInventory[shopItem.id] || 0;
+            const totalCost = shopItem.cost * amount;
+
+            if (totalCoins >= totalCost && (currentStock + amount) <= shopItem.maxLimit) {
+                totalCoins -= totalCost;
+                shopInventory[shopItem.id] += amount;
+
+                localStorage.setItem('catchGame_shopInventory', JSON.stringify(shopInventory));
+                localStorage.setItem('catchGame_totalCoins', totalCoins);
+                coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
+
+                inspectShopItem(shopItem);
+            }
+        }
+
         function updateBackground() {
             const currentBg = backgroundsConfig.find(bg => score >= bg.minScore && score <= bg.maxScore);
             container.style.backgroundImage = currentBg ? currentBg.image : "linear-gradient(to bottom, #87CEEB, #E0F6FF)";
@@ -601,9 +824,15 @@
             collectiblesConfig.forEach(c => clearedInv[c.id] = 0);
             localStorage.setItem('catchGame_inventory', JSON.stringify(clearedInv));
             
+            // Wipe shop storage nodes down to zero assets too
+            const clearedShop = {};
+            shopConfig.forEach(s => clearedShop[s.id] = 0);
+            localStorage.setItem('catchGame_shopInventory', JSON.stringify(clearedShop));
+            
             highScore = 0;
             totalCoins = 0;
             itemInventory = clearedInv;
+            shopInventory = clearedShop;
             
             highscoreDisplay.innerText = "🏆 Best: 0";
             coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
@@ -658,21 +887,17 @@
             specialItemNode.style.display = "block";
         }
 
-        // 💖 CORE SCORE ENGINE MODS FOR BALANCING HEART LIFELINES
         function checkHeartDropMilestones() {
             if (isHeartActive || score === 0) return;
 
-            // 1. Check for the Guaranteed 500-point Milestone
             let currentGuaranteedStep = Math.floor(score / heartConfig.guaranteedScoreStep);
             if (currentGuaranteedStep > lastGuaranteedMilestone) {
                 lastGuaranteedMilestone = currentGuaranteedStep;
-                // Sync the lower 200 step tracker so we don't double drop items on identical marks
                 lastChanceMilestone = Math.floor(score / heartConfig.chanceScoreStep); 
                 launchHeartItem();
                 return;
             }
 
-            // 2. Check for the 50% Chance 200-point Milestone
             let currentChanceStep = Math.floor(score / heartConfig.chanceScoreStep);
             if (currentChanceStep > lastChanceMilestone) {
                 lastChanceMilestone = currentChanceStep;
@@ -701,24 +926,50 @@
             heartNode.style.display = "block";
         }
 
+        // 🎮 MATCH INITIALIZATION ENGINE (CONSUMES PRE-GAME SHOP PERKS)
         function startGameSession() {
             cancelAnimationFrame(animationFrameId);
             score = 0;
-            lives = 3;
             speed = 4;
             isPlaying = true;
             activeSpecialItem = null;
             specialSpawnedThisRange = false;
             specialItemNode.style.display = "none";
             
-            // Clear heart metrics completely
             isHeartActive = false;
             lastChanceMilestone = 0;
             lastGuaranteedMilestone = 0;
             heartNode.style.display = "none";
             
+            // 1. Process EXTRA LIVES perk
+            lives = 3; // Baseline setting
+            if (shopInventory["extra_life"] && shopInventory["extra_life"] > 0) {
+                lives += shopInventory["extra_life"]; // Append all stacked extra lives purchased
+                shopInventory["extra_life"] = 0;     // Drain inventory payload back to zero
+            }
+            
+            // 2. Process X2 COINS power-up perk
+            activeX2Coins = false; // Reset modifier
+            if (shopInventory["double_coin"] && shopInventory["double_coin"] > 0) {
+                activeX2Coins = true;
+                shopInventory["double_coin"]--; // Consume exactly 1 item for this single run
+            }
+
+            // 3. Process WIDE BASKET size stretching perk
+            basketWidth = 60; // Reset standard baseline
+            if (shopInventory["wide_basket"] && shopInventory["wide_basket"] > 0) {
+                basketWidth = 120; // Stretch to double scale layout dimensions
+                shopInventory["wide_basket"]--; // Consume exactly 1 item for this single run
+            }
+            
+            // Commit remaining shop stocks to local memory structures
+            localStorage.setItem('catchGame_shopInventory', JSON.stringify(shopInventory));
+
+            // Sync visual width configurations dynamically to HTML nodes
+            basket.style.width = basketWidth + 'px';
+            
             scoreDisplay.innerText = "Score: 0";
-            livesDisplay.innerText = "Lives: 3";
+            livesDisplay.innerText = "Lives: " + lives;
             updateBackground(); 
             spawnItem();
             gameLoop();
@@ -733,7 +984,11 @@
             if (itemY >= (containerHeight - 50) && itemY <= (containerHeight - 10)) {
                 if (itemX + 40 >= basketX && itemX <= basketX + basketWidth) {
                     score += 10;
-                    totalCoins += 1; 
+                    
+                    // Apply dynamic x2 Coin calculations
+                    const coinPayout = activeX2Coins ? 2 : 1;
+                    totalCoins += coinPayout; 
+                    
                     localStorage.setItem('catchGame_totalCoins', totalCoins);
                     coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
                     scoreDisplay.innerText = "Score: " + score;
@@ -741,7 +996,7 @@
                     
                     updateBackground();
                     checkSpecialSpawn(); 
-                    checkHeartDropMilestones(); // Run heart trigger calculation loops!
+                    checkHeartDropMilestones(); 
                     spawnItem();
                 }
             }
@@ -765,6 +1020,7 @@
                         itemInventory[activeSpecialItem.id]++;
                         localStorage.setItem('catchGame_inventory', JSON.stringify(itemInventory));
 
+                        // Special collectibles keep their flat catch values, unaffected by standard coin multipliers
                         totalCoins += activeSpecialItem.catchBonus;
                         localStorage.setItem('catchGame_totalCoins', totalCoins);
                         coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
@@ -780,14 +1036,13 @@
                 }
             }
 
-            // 💖 RUNTIME PHYSIC LOGIC ENGINE FOR FALLING HEARTS
             if (isHeartActive) {
                 heartY += heartConfig.speed;
                 heartNode.style.top = heartY + 'px';
 
                 if (heartY >= (containerHeight - 50) && heartY <= (containerHeight - 10)) {
                     if (heartX + 40 >= basketX && heartX <= basketX + basketWidth) {
-                        lives++; // Reward the extra life player pool
+                        lives++; 
                         livesDisplay.innerText = "Lives: " + lives;
                         isHeartActive = false;
                         heartNode.style.display = "none";
