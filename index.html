@@ -1024,7 +1024,8 @@
                 }
             }
 
-            if (itemY > containerHeight) {
+	    // notes to me; this just gives the fast-moving items extra frame padding to be caught cleanly
+            if (itemY > containerHeight + 20) {
                 lives--;
                 livesDisplay.innerText = "Lives: " + lives;
                 if (lives <= 0) { getEndEngineResolution(); return; }
