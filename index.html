@@ -315,6 +315,9 @@
                 <div id="highscore-display">🏆 Best: 0</div>
                 <div id="coins-display">💰 Total Coins: 0</div>
             </div>
+            <div id="powerups-row" class="ui-row" style="font-size: 12px; opacity: 0.9; display: none; justify-content: flex-end; width: 100%;">
+                <div id="powerups-display">Power ups: </div>
+            </div>
         </div>
         
         <div id="item"></div>
@@ -941,10 +944,17 @@
             lastGuaranteedMilestone = 0;
             heartNode.style.display = "none";
             
+            // Track active emojis for the UI display line
+            let activePowerUpVisuals = [];
+
             // 1. Process EXTRA LIVES perk
             lives = 3; // Baseline setting
             if (shopInventory["extra_life"] && shopInventory["extra_life"] > 0) {
                 lives += shopInventory["extra_life"]; // Append all stacked extra lives purchased
+                
+                // Add an extra heart emoji to show they have starting bonus lives stacked
+                activePowerUpVisuals.push(shopConfig.find(s => s.id === "extra_life").visual);
+                
                 shopInventory["extra_life"] = 0;     // Drain inventory payload back to zero
             }
             
@@ -952,6 +962,7 @@
             activeX2Coins = false; // Reset modifier
             if (shopInventory["double_coin"] && shopInventory["double_coin"] > 0) {
                 activeX2Coins = true;
+                activePowerUpVisuals.push(shopConfig.find(s => s.id === "double_coin").visual);
                 shopInventory["double_coin"]--; // Consume exactly 1 item for this single run
             }
 
@@ -959,7 +970,19 @@
             basketWidth = 60; // Reset standard baseline
             if (shopInventory["wide_basket"] && shopInventory["wide_basket"] > 0) {
                 basketWidth = 120; // Stretch to double scale layout dimensions
+                activePowerUpVisuals.push(shopConfig.find(s => s.id === "wide_basket").visual);
                 shopInventory["wide_basket"]--; // Consume exactly 1 item for this single run
+            }
+            
+            // 🖥️ UI POWER-UPS RENDERING LOGIC
+            const pRow = document.getElementById('powerups-row');
+            const pDisplay = document.getElementById('powerups-display');
+            
+            if (activePowerUpVisuals.length > 0) {
+                pDisplay.innerText = "Power ups: " + activePowerUpVisuals.join(" ");
+                pRow.style.display = "flex"; // Reveal the line if powerups are active
+            } else {
+                pRow.style.display = "none";  // Hide the line completely if none are used
             }
             
             // Commit remaining shop stocks to local memory structures
