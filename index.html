@@ -439,6 +439,8 @@
         let speed = 4;
         let isPlaying = false; 
         let animationFrameId;
+        // 🔄 TRACKS COLLECTIBLES THAT ALREADY ROLLED/SPAWNED THIS RUN
+        let spawnedItemIdsThisRun = [];
 
         const containerWidth = 400;
         const containerHeight = 500;
@@ -857,31 +859,30 @@
             item.style.top = itemY + 'px';
         }
 
-        // 🕵️‍♂️ DYNAMIC ITEM SPAWN REGULATOR
+        // 🕵️‍♂️ FIXED SINGLE-ROLL ITEM SPAWN REGULATOR
         function checkSpecialSpawn() {
             if (activeSpecialItem) return;
 
-            // 1. Gather ALL collectibles that match the user's current score
-            const validItems = collectiblesConfig.filter(item => score >= item.minScore && score <= item.maxScore);
+            // Find any item where the user JUST reached or passed its minimum score requirement,
+            // but ensure we haven't already attempted to roll/spawn it during this match run.
+            const validItems = collectiblesConfig.filter(item => 
+                score >= item.minScore && 
+                score <= item.maxScore && 
+                !spawnedItemIdsThisRun.includes(item.id)
+            );
             
-            // If there are no items configured for this score level, exit out
-            if (validItems.length === 0) {
-                specialSpawnedThisRange = false;
-                return;
-            }
+            if (validItems.length === 0) return;
 
-            // 2. Prevent instant frame lockouts: check only once per specific point scored
-            if (!specialSpawnedThisRange) {
-                specialSpawnedThisRange = true;
+            // Process each available item that needs its single-time run check
+            validItems.forEach(item => {
+                // Immediately log its ID so the engine NEVER rolls for this item again this match
+                spawnedItemIdsThisRun.push(item.id);
 
-                // 3. Select a random eligible item out of the available pool
-                const randomChoice = validItems[Math.floor(Math.random() * validItems.length)];
-
-                // 4. Test against its unique drop percentage chance
-                if (Math.random() <= randomChoice.dropChance) {
-                    launchSpecialItem(randomChoice);
+                // Perform a single, definitive dice roll check based on its drop chance percentage
+                if (Math.random() <= item.dropChance) {
+                    launchSpecialItem(item);
                 }
-            }
+            });
         }
 
         function launchSpecialItem(itemConfig) {
@@ -951,7 +952,9 @@
             activeSpecialItem = null;
             specialSpawnedThisRange = false;
             specialItemNode.style.display = "none";
-            
+            // ✨ note to self: this RESETs the ITEM TRACKER FOR the NEW RUN
+            spawnedItemIdsThisRun = [];
+
             isHeartActive = false;
             lastChanceMilestone = 0;
             lastGuaranteedMilestone = 0;
@@ -1020,22 +1023,18 @@
             if (itemY >= (containerHeight - 50) && itemY <= (containerHeight - 10)) {
                 if (itemX + 40 >= basketX && itemX <= basketX + basketWidth) {
                     score += 10;
-
-                    // This resets the tracking lock every single time you score a point,
-                    // allowing a new random drop check to happen immediately on the next frame!
-                    specialSpawnedThisRange = false;
-
-                    // Apply dynamic x2 Coin calculations
+                    
                     const coinPayout = activeX2Coins ? 2 : 1;
                     totalCoins += coinPayout; 
                     
                     localStorage.setItem('catchGame_totalCoins', totalCoins);
                     coinsDisplay.innerText = "💰 Total Coins: " + totalCoins;
-                    scoreDisplay.innerText = "Score: " + score;
-                    speed += 0.2; 
+                    scoreDisplay.innerText = "Score: " + score; 
+                    // note to self: Cap speed comfortably per your previous adjustment? just replace to if (speed < 24) { speed += 0.2; } this will give it a cap speed.
+                    speed += 0.2;
                     
                     updateBackground();
-                    checkSpecialSpawn(); 
+                    checkSpecialSpawn(); // 🎯 Evaluates single rolls if new item thresholds are crossed!
                     checkHeartDropMilestones(); 
                     spawnItem();
                 }
