@@ -857,20 +857,30 @@
             item.style.top = itemY + 'px';
         }
 
+        // 🕵️‍♂️ DYNAMIC ITEM SPAWN REGULATOR
         function checkSpecialSpawn() {
-            if (activeSpecialItem) return; 
+            if (activeSpecialItem) return;
 
-            const potentialItem = collectiblesConfig.find(item => score >= item.minScore && score <= item.maxScore);
-
-            if (potentialItem) {
-                if (!specialSpawnedThisRange) {
-                    specialSpawnedThisRange = true; 
-                    if (Math.random() <= potentialItem.dropChance) {
-                        launchSpecialItem(potentialItem);
-                    }
-                }
-            } else {
+            // 1. Gather ALL collectibles that match the user's current score
+            const validItems = collectiblesConfig.filter(item => score >= item.minScore && score <= item.maxScore);
+            
+            // If there are no items configured for this score level, exit out
+            if (validItems.length === 0) {
                 specialSpawnedThisRange = false;
+                return;
+            }
+
+            // 2. Prevent instant frame lockouts: check only once per specific point scored
+            if (!specialSpawnedThisRange) {
+                specialSpawnedThisRange = true;
+
+                // 3. Select a random eligible item out of the available pool
+                const randomChoice = validItems[Math.floor(Math.random() * validItems.length)];
+
+                // 4. Test against its unique drop percentage chance
+                if (Math.random() <= randomChoice.dropChance) {
+                    launchSpecialItem(randomChoice);
+                }
             }
         }
 
@@ -1010,7 +1020,11 @@
             if (itemY >= (containerHeight - 50) && itemY <= (containerHeight - 10)) {
                 if (itemX + 40 >= basketX && itemX <= basketX + basketWidth) {
                     score += 10;
-                    
+
+                    // This resets the tracking lock every single time you score a point,
+                    // allowing a new random drop check to happen immediately on the next frame!
+                    specialSpawnedThisRange = false;
+
                     // Apply dynamic x2 Coin calculations
                     const coinPayout = activeX2Coins ? 2 : 1;
                     totalCoins += coinPayout; 
