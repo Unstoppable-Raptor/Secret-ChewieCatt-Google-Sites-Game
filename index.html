@@ -10,6 +10,37 @@
             margin: 0;
             padding: 0;
         }
+        /* 📜 DYNAMIC INTERNAL LORE and info SCROLL CONTROLS */
+        .lore-scroll-box {
+            max-height: 140px; 
+            overflow-y: scroll;  /* note to self; Changed from 'auto' to 'scroll' to force the track window to always appear */
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px dashed #777;
+            border-radius: 6px;
+            margin-top: 5px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #333;
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        /* Customize scrollbar appearance to look like a neat draggable bar */
+        .lore-scroll-box::-webkit-scrollbar {
+            width: 8px; /* Slightly wider so it's easier to tap/grab with a mouse or trackpad cursor */
+        }
+        .lore-scroll-box::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.08); /* Gives a subtle dark track behind the handle */
+            border-radius: 10px;
+        }
+        .lore-scroll-box::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.4); /* Darker thumb handle so it visually stands out clearly */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        .lore-scroll-box::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.6); /* Lights up when they hover over it */
+        }
         body {
             background-color: #f0f2f5;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -402,7 +433,12 @@
 
         <div id="info-screen" class="screen-overlay" style="display: none;">
             <h2>How to Play</h2>
-            <p class="info-text">Move your mouse or drag your finger across the screen to control the basket. Catch falling items (Chewie Coins) to score points and build up your $$$ balance!</p>
+            
+            <div class="lore-scroll-box" style="max-height: 220px; font-size: 12px; margin-bottom: 15px; width: 100%;">
+                <p>Move your mouse or drag your finger across the screen to control the basket. Catch falling items (Chewie Coins) to score points and build up your $$$ balance!</p>
+                <p style="margin-top: 8px;">Welcome to the official Catch Game of the ChewieCatt Corner Discord server! Catch falling items, stack coins, buy temporary run power-ups from the server market shop, and unlock detailed server collectibles tracking years of history.</p>
+                <p style="margin-top: 8px;">From user-led factions like the CIA and FBI, to monumental community events since 2019, this game honors the rich background and wholesome players of the community.</p>
+            </div>
             <button class="menu-btn btn-blue" onclick="showScreen('main-menu-screen')">Back to Menu</button>
         </div>
 
@@ -563,7 +599,7 @@
 
             itemsToDisplay.forEach((item) => {
                 const count = itemInventory[item.id] || 0;
-                const isUnlocked = count > 0;
+                const  = count > 0;
                 
                 const slot = document.createElement('div');
                 slot.className = "collectible-slot" + (isUnlocked ? " unlocked" : "");
@@ -615,6 +651,7 @@
 
             if (isUnlocked) {
                 title.innerText = item.name;
+                description.className = "lore-scroll-box";
                 description.innerText = item.desc;
                 countDisplay.innerText = "Owned: " + count;
                 
@@ -742,6 +779,7 @@
             box.innerText = "";
 
             title.innerText = shopItem.name;
+            description.className = "lore-scroll-box";
             description.innerText = shopItem.desc;
             
             const currentStock = shopInventory[shopItem.id] || 0;
